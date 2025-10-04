@@ -121,7 +121,7 @@ export default function App() {
         <div style={{ display: 'flex', gap: '10px' }}>
           <input
             type="text"
-            placeholder="作品名または作者名で検索..."
+            placeholder="作品名で検索..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
