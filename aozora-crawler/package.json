@@ -9,7 +9,23 @@
     "dev:electron": "tsc -p tsconfig.node.json && NODE_ENV=development electron .",
     "build": "tsc -p tsconfig.node.json && vite build",
     "start": "npm run build && electron .",
+    "package": "npm run build && electron-builder",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "build": {
+    "appId": "com.aozora.crawler",
+    "productName": "青空文庫クローラー",
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": ["dmg", "zip"]
+    },
+    "directories": {
+      "output": "release"
+    }
   },
   "keywords": [],
   "author": "",
