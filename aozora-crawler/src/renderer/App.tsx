@@ -37,14 +37,11 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    console.log('🔍 Filter effect triggered:', { searchTerm, selectedAuthor, worksCount: works.length });
-    
     let filtered = works;
 
     // 作者フィルター
     if (selectedAuthor !== 'all') {
       filtered = filtered.filter(w => w.author === selectedAuthor);
-      console.log('📝 After author filter:', filtered.length);
     }
 
     // 検索フィルター
@@ -53,12 +50,10 @@ export default function App() {
         w.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         w.author.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      console.log('🔎 After search filter:', filtered.length);
     }
 
-    console.log('✅ Setting filteredWorks:', filtered.length);
     setFilteredWorks(filtered);
-    setRenderKey(prev => prev + 1); // Force re-render with new key
+    setRenderKey(prev => prev + 1);
   }, [searchTerm, selectedAuthor, works]);
 
   const loadWorks = async (all = false) => {
@@ -159,7 +154,6 @@ export default function App() {
 
       {/* 作品リスト */}
       <div key={renderKey} style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
-        {console.log('📋 Rendering works list, count:', filteredWorks.length)}
         {filteredWorks.map((work) => (
           <div
             key={`${work.id}-${work.url}`}
