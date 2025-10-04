@@ -59,6 +59,7 @@ function createWindow() {
     }
     else {
         mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+        mainWindow.webContents.openDevTools(); // 本番モードでも開発者ツールを開く
     }
     mainWindow.on('closed', () => {
         mainWindow = null;

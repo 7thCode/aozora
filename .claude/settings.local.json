@@ -23,7 +23,12 @@
       "Bash(curl -s \"https://www.aozora.gr.jp/cards/000148/card789.html\")",
       "Bash(curl -s \"https://www.aozora.gr.jp/index_pages/list_person_all_extended_utf8.zip\" -o /tmp/aozora.zip)",
       "Bash(unzip:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "mcp__serena__activate_project",
+      "mcp__serena__list_dir",
+      "mcp__serena__find_file",
+      "mcp__serena__search_for_pattern",
+      "mcp__serena__replace_regex"
     ],
     "deny": [],
     "ask": []

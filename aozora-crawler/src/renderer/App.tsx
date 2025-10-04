@@ -23,6 +23,7 @@ declare global {
 export default function App() {
   const [works, setWorks] = useState<WorkItem[]>([]);
   const [filteredWorks, setFilteredWorks] = useState<WorkItem[]>([]);
+  const [renderKey, setRenderKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAuthor, setSelectedAuthor] = useState('all');
   const [loading, setLoading] = useState(false);
@@ -36,7 +37,28 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    filterWorks();
+    console.log('🔍 Filter effect triggered:', { searchTerm, selectedAuthor, worksCount: works.length });
+    
+    let filtered = works;
+
+    // 作者フィルター
+    if (selectedAuthor !== 'all') {
+      filtered = filtered.filter(w => w.author === selectedAuthor);
+      console.log('📝 After author filter:', filtered.length);
+    }
+
+    // 検索フィルター
+    if (searchTerm) {
+      filtered = filtered.filter(w =>
+        w.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        w.author.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      console.log('🔎 After search filter:', filtered.length);
+    }
+
+    console.log('✅ Setting filteredWorks:', filtered.length);
+    setFilteredWorks(filtered);
+    setRenderKey(prev => prev + 1); // Force re-render with new key
   }, [searchTerm, selectedAuthor, works]);
 
   const loadWorks = async (all = false) => {
@@ -53,25 +75,6 @@ export default function App() {
       await window.electronAPI.clearCache();
       await loadWorks(true);
     }
-  };
-
-  const filterWorks = () => {
-    let filtered = works;
-
-    // 作者フィルター
-    if (selectedAuthor !== 'all') {
-      filtered = filtered.filter(w => w.author === selectedAuthor);
-    }
-
-    // 検索フィルター
-    if (searchTerm) {
-      filtered = filtered.filter(w =>
-        w.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        w.author.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    setFilteredWorks(filtered);
   };
 
   const handleDownload = async (url: string, title: string) => {
@@ -155,10 +158,11 @@ export default function App() {
       </div>
 
       {/* 作品リスト */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
+      <div key={renderKey} style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
+        {console.log('📋 Rendering works list, count:', filteredWorks.length)}
         {filteredWorks.map((work) => (
           <div
-            key={work.id}
+            key={`${work.id}-${work.url}`}
             style={{
               padding: '15px',
               marginBottom: '10px',
