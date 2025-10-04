@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rz‡«¯íüéü PoC</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      background: #f0f8ff;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #555;
+      font-weight: 600;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #4CAF50;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #45a049;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+      display: none;
+    }
+
+    .status.show {
+      display: block;
+    }
+
+    .status.starting {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    .status.completed {
+      background: #e8f5e9;
+      color: #388e3c;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .example {
+      margin-top: 20px;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: 5px;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>=Ú Rz‡«¯íüéü PoC</h1>
+
+    <div class="input-group">
+      <label for="novelUrl">\ÁURL’e›</label>
+      <input
+        type="text"
+        id="novelUrl"
+        placeholder="https://www.aozora.gr.jp/cards/000148/card789.html"
+        value="https://www.aozora.gr.jp/cards/000148/card789.html"
+      />
+    </div>
+
+    <button id="downloadBtn">À¦óíüÉ</button>
+
+    <div id="status" class="status">
+      <span id="statusText"></span>
+    </div>
+
+    <div class="example">
+      <strong>µó×ëURL:</strong><br>
+      >)o+gB‹: https://www.aozora.gr.jp/cards/000148/card789.html<br>
+      º“1<: https://www.aozora.gr.jp/cards/000035/card301.html
+    </div>
+  </div>
+
+  <script src="./renderer.js"></script>
+</body>
+</html>

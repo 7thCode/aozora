@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__serena__get_current_config",
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(npm create:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(touch:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(ls:*)",
+      "Bash(head:*)",
+      "Bash(cat:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm start)",
+      "WebFetch(domain:www.aozora.gr.jp)",
+      "Bash(curl -s \"https://www.aozora.gr.jp/index_pages/person148.html\")",
+      "mcp__serena__read_file",
+      "Bash(curl -s \"https://www.aozora.gr.jp/index_pages/person119.html\")",
+      "Bash(curl -s \"https://www.aozora.gr.jp/\")",
+      "Bash(curl -s \"https://www.aozora.gr.jp/index_pages/person_all.html\")",
+      "Bash(curl -s \"https://www.aozora.gr.jp/cards/000148/card789.html\")",
+      "Bash(curl -s \"https://www.aozora.gr.jp/index_pages/list_person_all_extended_utf8.zip\" -o /tmp/aozora.zip)",
+      "Bash(unzip:*)",
+      "Bash(node:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
