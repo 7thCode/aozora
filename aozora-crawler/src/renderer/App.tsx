@@ -26,6 +26,8 @@ export default function App() {
   const [renderKey, setRenderKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAuthor, setSelectedAuthor] = useState('all');
+  const [authorInput, setAuthorInput] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState<{ stage: string; percent: number } | null>(null);
@@ -90,6 +92,25 @@ export default function App() {
 
   const authors = Array.from(new Set(works.map(w => w.author))).sort();
 
+  // オートコンプリート用のフィルタリング
+  const filteredAuthors = authorInput.trim()
+    ? authors.filter(a => a.toLowerCase().includes(authorInput.toLowerCase())).slice(0, 50)
+    : authors;
+
+  // 作家選択のハンドラ
+  const handleAuthorSelect = (author: string) => {
+    setSelectedAuthor(author);
+    setAuthorInput(author);
+    setShowSuggestions(false);
+  };
+
+  // 作家検索のクリア
+  const handleClearAuthor = () => {
+    setAuthorInput('');
+    setSelectedAuthor('all');
+    setShowSuggestions(false);
+  };
+
   return (
     <div style={{ display: 'flex', height: '100vh', flexDirection: 'column' }}>
       {/* ヘッダー */}
@@ -112,22 +133,81 @@ export default function App() {
             }}
           />
           
-          <select
-            value={selectedAuthor}
-            onChange={(e) => setSelectedAuthor(e.target.value)}
-            style={{
-              padding: '10px',
-              border: '2px solid #ddd',
-              borderRadius: '6px',
-              fontSize: '14px',
-              minWidth: '150px'
-            }}
-          >
-            <option value="all">すべての作者</option>
-            {authors.map(author => (
-              <option key={author} value={author}>{author}</option>
-            ))}
-          </select>
+          <div style={{ position: 'relative', flex: '0 0 250px' }}>
+            <input
+              type="text"
+              placeholder="作家名で絞り込み..."
+              value={authorInput}
+              onChange={(e) => {
+                setAuthorInput(e.target.value);
+                setSelectedAuthor('all');
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              style={{
+                width: '100%',
+                padding: '10px 35px 10px 10px',
+                border: '2px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }}
+            />
+            {authorInput && (
+              <button
+                onClick={handleClearAuthor}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  color: '#999',
+                  padding: '0 5px'
+                }}
+              >
+                ×
+              </button>
+            )}
+            {showSuggestions && filteredAuthors.length > 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  marginTop: '4px',
+                  background: 'white',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                  zIndex: 1000
+                }}
+              >
+                {filteredAuthors.map(author => (
+                  <div
+                    key={author}
+                    onClick={() => handleAuthorSelect(author)}
+                    style={{
+                      padding: '10px',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #f0f0f0',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                  >
+                    📝 {author}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
