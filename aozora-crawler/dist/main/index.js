@@ -35,9 +35,11 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const path = __importStar(require("path"));
+const fs = __importStar(require("fs"));
 const downloader_1 = require("./downloader");
 const index_fetcher_1 = require("./index-fetcher");
 const cache_manager_1 = require("./cache-manager");
+const settings_1 = require("./settings");
 let mainWindow = null;
 const downloader = new downloader_1.AozoraDownloader();
 const indexFetcher = new index_fetcher_1.AozoraIndexFetcher();
@@ -134,4 +136,23 @@ electron_1.ipcMain.handle('clear-cache', async () => {
     catch (error) {
         return { success: false, error: error.message };
     }
+});
+// 保存先設定関連
+electron_1.ipcMain.handle('get-save-path', () => {
+    return (0, settings_1.getSavePath)();
+});
+electron_1.ipcMain.handle('select-save-path', async () => {
+    const result = await electron_1.dialog.showOpenDialog({
+        properties: ['openDirectory', 'createDirectory'],
+        title: '保存先フォルダを選択',
+        buttonLabel: '選択'
+    });
+    if (!result.canceled && result.filePaths.length > 0) {
+        (0, settings_1.setSavePath)(result.filePaths[0]);
+        return { success: true, path: result.filePaths[0] };
+    }
+    return { success: false };
+});
+electron_1.ipcMain.handle('check-save-path', async (_event, checkPath) => {
+    return fs.existsSync(checkPath);
 });

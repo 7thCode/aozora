@@ -1,8 +1,10 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import * as path from 'path';
+import * as fs from 'fs';
 import { AozoraDownloader } from './downloader';
 import { AozoraIndexFetcher } from './index-fetcher';
 import { CacheManager } from './cache-manager';
+import { getSavePath, setSavePath } from './settings';
 
 let mainWindow: BrowserWindow | null = null;
 const downloader = new AozoraDownloader();
@@ -111,4 +113,28 @@ ipcMain.handle('clear-cache', async () => {
   } catch (error) {
     return { success: false, error: (error as Error).message };
   }
+});
+
+// 保存先設定関連
+ipcMain.handle('get-save-path', () => {
+  return getSavePath();
+});
+
+ipcMain.handle('select-save-path', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+    title: '保存先フォルダを選択',
+    buttonLabel: '選択'
+  });
+
+  if (!result.canceled && result.filePaths.length > 0) {
+    setSavePath(result.filePaths[0]);
+    return { success: true, path: result.filePaths[0] };
+  }
+
+  return { success: false };
+});
+
+ipcMain.handle('check-save-path', async (_event, checkPath: string) => {
+  return fs.existsSync(checkPath);
 });

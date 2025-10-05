@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { homedir } from 'os';
+import { getSavePath } from './settings';
 
 export interface NovelMetadata {
   id: string;
@@ -16,10 +16,8 @@ export interface NovelMetadata {
 }
 
 export class AozoraDownloader {
-  private outputDir: string;
-
-  constructor(outputDir?: string) {
-    this.outputDir = outputDir || path.join(homedir(), 'Downloads', 'aozora');
+  constructor() {
+    // 保存先は設定から動的に取得
   }
 
   /**
@@ -124,11 +122,11 @@ export class AozoraDownloader {
    * ファイル保存
    */
   private async saveNovel(metadata: NovelMetadata, text: string): Promise<string> {
-    const authorDir = path.join(this.outputDir, this.sanitizeFilename(metadata.author));
-    await fs.mkdir(authorDir, { recursive: true });
+    const outputDir = getSavePath();
+    await fs.mkdir(outputDir, { recursive: true });
 
     const filename = `${this.sanitizeFilename(metadata.title)}.txt`;
-    const filePath = path.join(authorDir, filename);
+    const filePath = await this.getUniqueFilePath(outputDir, filename);
 
     const content = [
       `作品名: ${metadata.title}`,
@@ -141,6 +139,27 @@ export class AozoraDownloader {
     ].join('\n');
 
     await fs.writeFile(filePath, content, 'utf-8');
+
+    return filePath;
+  }
+
+  /**
+   * 重複ファイル名の処理（番号付与）
+   */
+  private async getUniqueFilePath(dir: string, filename: string): Promise<string> {
+    const ext = path.extname(filename);
+    const base = path.basename(filename, ext);
+    let filePath = path.join(dir, filename);
+    let counter = 1;
+
+    try {
+      while (await fs.access(filePath).then(() => true).catch(() => false)) {
+        filePath = path.join(dir, `${base}_${counter}${ext}`);
+        counter++;
+      }
+    } catch {
+      // ファイルが存在しない場合はそのまま
+    }
 
     return filePath;
   }

@@ -8,6 +8,9 @@ const electronAPI = {
     clearCache: () => electron_1.ipcRenderer.invoke('clear-cache'),
     onDownloadProgress: (callback) => {
         electron_1.ipcRenderer.on('download-progress', (_event, progress) => callback(progress));
-    }
+    },
+    getSavePath: () => electron_1.ipcRenderer.invoke('get-save-path'),
+    selectSavePath: () => electron_1.ipcRenderer.invoke('select-save-path'),
+    checkSavePath: (path) => electron_1.ipcRenderer.invoke('check-save-path', path)
 };
 electron_1.contextBridge.exposeInMainWorld('electronAPI', electronAPI);

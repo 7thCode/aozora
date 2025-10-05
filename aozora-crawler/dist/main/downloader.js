@@ -41,10 +41,10 @@ const axios_1 = __importDefault(require("axios"));
 const cheerio = __importStar(require("cheerio"));
 const fs = __importStar(require("fs/promises"));
 const path = __importStar(require("path"));
-const os_1 = require("os");
+const settings_1 = require("./settings");
 class AozoraDownloader {
-    constructor(outputDir) {
-        this.outputDir = outputDir || path.join((0, os_1.homedir)(), 'Downloads', 'aozora');
+    constructor() {
+        // 保存先は設定から動的に取得
     }
     /**
      * 青空文庫作品をダウンロード
@@ -130,10 +130,10 @@ class AozoraDownloader {
      * ファイル保存
      */
     async saveNovel(metadata, text) {
-        const authorDir = path.join(this.outputDir, this.sanitizeFilename(metadata.author));
-        await fs.mkdir(authorDir, { recursive: true });
+        const outputDir = (0, settings_1.getSavePath)();
+        await fs.mkdir(outputDir, { recursive: true });
         const filename = `${this.sanitizeFilename(metadata.title)}.txt`;
-        const filePath = path.join(authorDir, filename);
+        const filePath = await this.getUniqueFilePath(outputDir, filename);
         const content = [
             `作品名: ${metadata.title}`,
             `作者: ${metadata.author}`,
@@ -144,6 +144,25 @@ class AozoraDownloader {
             text
         ].join('\n');
         await fs.writeFile(filePath, content, 'utf-8');
+        return filePath;
+    }
+    /**
+     * 重複ファイル名の処理（番号付与）
+     */
+    async getUniqueFilePath(dir, filename) {
+        const ext = path.extname(filename);
+        const base = path.basename(filename, ext);
+        let filePath = path.join(dir, filename);
+        let counter = 1;
+        try {
+            while (await fs.access(filePath).then(() => true).catch(() => false)) {
+                filePath = path.join(dir, `${base}_${counter}${ext}`);
+                counter++;
+            }
+        }
+        catch {
+            // ファイルが存在しない場合はそのまま
+        }
         return filePath;
     }
     sanitizeFilename(name) {

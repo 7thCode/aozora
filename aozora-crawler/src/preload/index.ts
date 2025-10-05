@@ -6,6 +6,9 @@ export interface ElectronAPI {
   fetchWorks: (options?: { all?: boolean; authorIds?: string[] }) => Promise<{ success: boolean; data?: any[]; error?: string }>;
   clearCache: () => Promise<{ success: boolean; error?: string }>;
   onDownloadProgress: (callback: (progress: { stage: string; percent: number }) => void) => void;
+  getSavePath: () => Promise<string>;
+  selectSavePath: () => Promise<{ success: boolean; path?: string }>;
+  checkSavePath: (path: string) => Promise<boolean>;
 }
 
 const electronAPI: ElectronAPI = {
@@ -15,7 +18,10 @@ const electronAPI: ElectronAPI = {
   clearCache: () => ipcRenderer.invoke('clear-cache'),
   onDownloadProgress: (callback) => {
     ipcRenderer.on('download-progress', (_event, progress) => callback(progress));
-  }
+  },
+  getSavePath: () => ipcRenderer.invoke('get-save-path'),
+  selectSavePath: () => ipcRenderer.invoke('select-save-path'),
+  checkSavePath: (path: string) => ipcRenderer.invoke('check-save-path', path)
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

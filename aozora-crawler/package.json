@@ -21,7 +21,10 @@
     ],
     "mac": {
       "category": "public.app-category.utilities",
-      "target": ["dmg", "zip"]
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
     "directories": {
       "output": "release"
@@ -45,6 +48,7 @@
   "dependencies": {
     "axios": "^1.12.2",
     "cheerio": "^1.1.2",
+    "electron-store": "^11.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "zustand": "^5.0.8"

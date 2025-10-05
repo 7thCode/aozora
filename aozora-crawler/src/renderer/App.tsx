@@ -16,6 +16,9 @@ declare global {
       fetchWorks: (options?: { all?: boolean; authorIds?: string[] }) => Promise<{ success: boolean; data?: WorkItem[]; error?: string }>;
       clearCache: () => Promise<{ success: boolean; error?: string }>;
       onDownloadProgress: (callback: (progress: { stage: string; percent: number }) => void) => void;
+      getSavePath: () => Promise<string>;
+      selectSavePath: () => Promise<{ success: boolean; path?: string }>;
+      checkSavePath: (path: string) => Promise<boolean>;
     };
   }
 }
@@ -32,10 +35,13 @@ export default function App() {
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState<{ stage: string; percent: number } | null>(null);
   const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [savePath, setSavePath] = useState<string>('');
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     loadWorks();
     window.electronAPI.onDownloadProgress((p) => setProgress(p));
+    window.electronAPI.getSavePath().then(setSavePath);
   }, []);
 
   useEffect(() => {
@@ -75,6 +81,16 @@ export default function App() {
   };
 
   const handleDownload = async (url: string, title: string) => {
+    // 保存先チェック
+    const isPathValid = await window.electronAPI.checkSavePath(savePath);
+    if (!isPathValid) {
+      setResult({
+        type: 'error',
+        message: '保存先が見つかりません。外部ストレージを接続するか、設定から保存先を変更してください。'
+      });
+      return;
+    }
+
     setDownloading(true);
     setResult(null);
     setProgress(null);
@@ -84,9 +100,17 @@ export default function App() {
     setDownloading(false);
 
     if (response.success) {
-      setResult({ type: 'success', message: `${title} - 保存完了` });
+      setResult({ type: 'success', message: `${title} - 保存完了: ${savePath}` });
     } else {
       setResult({ type: 'error', message: response.error || '不明なエラー' });
+    }
+  };
+
+  const handleSelectSavePath = async () => {
+    const response = await window.electronAPI.selectSavePath();
+    if (response.success && response.path) {
+      setSavePath(response.path);
+      setResult({ type: 'success', message: `保存先を変更しました: ${response.path}` });
     }
   };
 
@@ -213,23 +237,88 @@ export default function App() {
         <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: '12px', color: '#666' }}>
             {loading ? '読み込み中...' : `${filteredWorks.length} / ${works.length} 作品`}
+            {savePath && (
+              <div style={{ marginTop: '4px', fontSize: '11px', color: '#999' }}>
+                💾 保存先: {savePath}
+              </div>
+            )}
           </div>
-          <button
-            onClick={handleFetchAll}
-            disabled={loading}
-            style={{
-              padding: '6px 12px',
-              background: loading ? '#ccc' : '#2196F3',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontSize: '12px'
-            }}
-          >
-            全作家取得
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              style={{
+                padding: '6px 12px',
+                background: '#757575',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px'
+              }}
+            >
+              ⚙️ 設定
+            </button>
+            <button
+              onClick={handleFetchAll}
+              disabled={loading}
+              style={{
+                padding: '6px 12px',
+                background: loading ? '#ccc' : '#2196F3',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontSize: '12px'
+              }}
+            >
+              全作家取得
+            </button>
+          </div>
         </div>
+
+        {/* 設定パネル */}
+        {showSettings && (
+          <div style={{
+            marginTop: '15px',
+            padding: '15px',
+            background: '#f5f5f5',
+            borderRadius: '8px',
+            border: '1px solid #ddd'
+          }}>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>保存先設定</h3>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div style={{
+                flex: 1,
+                padding: '8px',
+                background: 'white',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '12px',
+                wordBreak: 'break-all'
+              }}>
+                {savePath || 'デフォルト: Downloads/aozora'}
+              </div>
+              <button
+                onClick={handleSelectSavePath}
+                style={{
+                  padding: '8px 16px',
+                  background: '#4CAF50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                📁 参照...
+              </button>
+            </div>
+            <div style={{ marginTop: '8px', fontSize: '11px', color: '#666' }}>
+              ※ ダウンロード時に保存先が存在しない場合はエラーになります
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 作品リスト */}
