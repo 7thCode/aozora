@@ -32,7 +32,8 @@
       "Bash(npm run package:*)",
       "mcp__serena__check_onboarding_performed",
       "Read(//Users/oda/Library/**)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "mcp__serena__create_text_file"
     ],
     "deny": [],
     "ask": []
