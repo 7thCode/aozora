@@ -115,6 +115,9 @@ class AozoraDownloader {
     /**
      * 本文取得
      */
+    /**
+     * XHTML本文取得（そのまま保存）
+     */
     async fetchNovelText(xhtmlUrl) {
         const response = await axios_1.default.get(xhtmlUrl, {
             headers: { 'User-Agent': 'AozoraCrawler/1.0' },
@@ -122,28 +125,24 @@ class AozoraDownloader {
         });
         const decoder = new TextDecoder('shift_jis');
         const htmlText = decoder.decode(response.data);
-        const $ = cheerio.load(htmlText);
-        const mainText = $('.main_text').text().trim();
-        return mainText;
+        return htmlText;
     }
     /**
      * ファイル保存
      */
-    async saveNovel(metadata, text) {
-        const outputDir = (0, settings_1.getSavePath)();
-        await fs.mkdir(outputDir, { recursive: true });
-        const filename = `${this.sanitizeFilename(metadata.title)}.txt`;
-        const filePath = await this.getUniqueFilePath(outputDir, filename);
-        const content = [
-            `作品名: ${metadata.title}`,
-            `作者: ${metadata.author}`,
-            `出典: ${metadata.url}`,
-            ``,
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-            ``,
-            text
-        ].join('\n');
-        await fs.writeFile(filePath, content, 'utf-8');
+    /**
+     * XHTML形式でファイル保存
+     */
+    /**
+     * XHTML形式でファイル保存
+     */
+    async saveNovel(metadata, htmlContent) {
+        const basePath = (0, settings_1.getSavePath)();
+        const authorDir = path.join(basePath, this.sanitizeFilename(metadata.author));
+        await fs.mkdir(authorDir, { recursive: true });
+        const filename = `${this.sanitizeFilename(metadata.title)}.html`;
+        const filePath = await this.getUniqueFilePath(authorDir, filename);
+        await fs.writeFile(filePath, htmlContent, 'utf-8');
         return filePath;
     }
     /**

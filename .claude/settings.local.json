@@ -33,7 +33,8 @@
       "mcp__serena__check_onboarding_performed",
       "Read(//Users/oda/Library/**)",
       "Bash(pkill:*)",
-      "mcp__serena__create_text_file"
+      "mcp__serena__create_text_file",
+      "mcp__serena__replace_symbol_body"
     ],
     "deny": [],
     "ask": []

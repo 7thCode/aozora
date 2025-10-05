@@ -341,8 +341,12 @@ export default function App() {
               <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>{work.title}</div>
               <div style={{ fontSize: '12px', color: '#666' }}>
                 {work.author} · {work.textType}
-                {work.charCount && ` · 約${work.charCount.toLocaleString()}字`}
               </div>
+              {work.charCount && (
+                <div style={{ fontSize: '12px', color: '#888', marginTop: '3px' }}>
+                  📊 約{work.charCount.toLocaleString()}字
+                </div>
+              )}
             </div>
             
             <button
