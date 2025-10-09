@@ -6,6 +6,7 @@ export interface ElectronAPI {
   fetchWorks: (options?: { all?: boolean; authorIds?: string[] }) => Promise<{ success: boolean; data?: any[]; error?: string }>;
   clearCache: () => Promise<{ success: boolean; error?: string }>;
   fetchCharCount: (url: string) => Promise<{ success: boolean; charCount?: number; error?: string }>;
+  fetchAccurateCharCount: (url: string) => Promise<{ success: boolean; charCount?: number; error?: string }>;
   onDownloadProgress: (callback: (progress: { stage: string; percent: number }) => void) => void;
   getSavePath: () => Promise<string>;
   selectSavePath: () => Promise<{ success: boolean; path?: string }>;
@@ -18,6 +19,7 @@ const electronAPI: ElectronAPI = {
   fetchWorks: (options?: { all?: boolean; authorIds?: string[] }) => ipcRenderer.invoke('fetch-works', options),
   clearCache: () => ipcRenderer.invoke('clear-cache'),
   fetchCharCount: (url: string) => ipcRenderer.invoke('fetch-char-count', url),
+  fetchAccurateCharCount: (url: string) => ipcRenderer.invoke('fetch-accurate-char-count', url),
   onDownloadProgress: (callback) => {
     ipcRenderer.on('download-progress', (_event, progress) => callback(progress));
   },

@@ -125,7 +125,7 @@ class AozoraIndexFetcher {
         return popularAuthors;
     }
     /**
-     * 作品カードページから文字数を取得
+     * 作品カードページから文字数を取得（概算・高速）
      */
     async fetchCharCount(cardUrl) {
         try {
@@ -157,6 +157,49 @@ class AozoraIndexFetcher {
             // エラーは無視して undefined を返す
         }
         return undefined;
+    }
+    /**
+     * 作品カードページから正確な文字数を取得
+     */
+    async fetchAccurateCharCount(cardUrl) {
+        try {
+            const response = await axios_1.default.get(cardUrl, {
+                headers: { 'User-Agent': 'AozoraCrawler/1.0' }
+            });
+            const $ = cheerio.load(response.data);
+            // XHTMLファイルのリンクを探す
+            const xhtmlLink = $('a[href$=".html"]').filter((_, el) => {
+                const href = $(el).attr('href');
+                return !!(href?.includes('/files/') && href?.includes('.html'));
+            }).first().attr('href');
+            if (!xhtmlLink)
+                return undefined;
+            // XHTMLファイルのURLを構築
+            const baseUrl = cardUrl.substring(0, cardUrl.lastIndexOf('/'));
+            const xhtmlUrl = `${baseUrl}/${xhtmlLink}`;
+            // HTMLファイルをダウンロード
+            const htmlResponse = await axios_1.default.get(xhtmlUrl, {
+                headers: { 'User-Agent': 'AozoraCrawler/1.0' },
+                responseType: 'arraybuffer'
+            });
+            // Shift_JISをUTF-8に変換
+            const decoder = new TextDecoder('shift_jis');
+            const html = decoder.decode(htmlResponse.data);
+            const $html = cheerio.load(html);
+            // 本文を抽出（青空文庫のHTMLは.main_textクラスに本文が入っている）
+            let mainText = $html('.main_text').text();
+            // ルビ記号を除去
+            mainText = mainText.replace(/《[^》]*》/g, '');
+            mainText = mainText.replace(/［[^\］]*］/g, '');
+            mainText = mainText.replace(/｜/g, '');
+            // 空白文字や改行を除去して純粋な文字数を取得
+            const charCount = mainText.replace(/\s/g, '').length;
+            return charCount;
+        }
+        catch (error) {
+            console.error(`正確な文字数取得失敗: ${cardUrl}`, error);
+            return undefined;
+        }
     }
     /**
      * 複数作者の作品を一括取得

@@ -98,10 +98,20 @@ electron_1.ipcMain.handle('get-metadata', async (_event, url) => {
         return { success: false, error: error.message };
     }
 });
-// 単一作品の文字数取得
+// 単一作品の文字数取得（概算・高速）
 electron_1.ipcMain.handle('fetch-char-count', async (_event, url) => {
     try {
         const charCount = await indexFetcher.fetchCharCount(url);
+        return { success: true, charCount };
+    }
+    catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+// 単一作品の正確な文字数取得
+electron_1.ipcMain.handle('fetch-accurate-char-count', async (_event, url) => {
+    try {
+        const charCount = await indexFetcher.fetchAccurateCharCount(url);
         return { success: true, charCount };
     }
     catch (error) {

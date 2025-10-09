@@ -16,6 +16,7 @@ declare global {
       fetchWorks: (options?: { all?: boolean; authorIds?: string[] }) => Promise<{ success: boolean; data?: WorkItem[]; error?: string }>;
       clearCache: () => Promise<{ success: boolean; error?: string }>;
       fetchCharCount: (url: string) => Promise<{ success: boolean; charCount?: number; error?: string }>;
+      fetchAccurateCharCount: (url: string) => Promise<{ success: boolean; charCount?: number; error?: string }>;
       onDownloadProgress: (callback: (progress: { stage: string; percent: number }) => void) => void;
       getSavePath: () => Promise<string>;
       selectSavePath: () => Promise<{ success: boolean; path?: string }>;
@@ -39,6 +40,8 @@ export default function App() {
   const [savePath, setSavePath] = useState<string>('');
   const [showSettings, setShowSettings] = useState(false);
   const [loadingCharCounts, setLoadingCharCounts] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<'none' | 'charCount-asc' | 'charCount-desc'>('none');
+  const [charCountFilter, setCharCountFilter] = useState<{ min: number; max: number }>({ min: 0, max: 1000000 });
 
   useEffect(() => {
     loadWorks();
@@ -62,9 +65,30 @@ export default function App() {
       );
     }
 
+    // 文字数フィルター
+    filtered = filtered.filter(w => {
+      if (!w.charCount) return true; // 文字数不明の作品は表示
+      return w.charCount >= charCountFilter.min && w.charCount <= charCountFilter.max;
+    });
+
+    // ソート
+    if (sortBy === 'charCount-asc') {
+      filtered = [...filtered].sort((a, b) => {
+        if (!a.charCount) return 1;
+        if (!b.charCount) return -1;
+        return a.charCount - b.charCount;
+      });
+    } else if (sortBy === 'charCount-desc') {
+      filtered = [...filtered].sort((a, b) => {
+        if (!a.charCount) return 1;
+        if (!b.charCount) return -1;
+        return b.charCount - a.charCount;
+      });
+    }
+
     setFilteredWorks(filtered);
     setRenderKey(prev => prev + 1);
-  }, [searchTerm, selectedAuthor, works]);
+  }, [searchTerm, selectedAuthor, works, sortBy, charCountFilter]);
 
   const loadWorks = async (all = false) => {
     setLoading(true);
@@ -137,15 +161,16 @@ export default function App() {
     setShowSuggestions(false);
   };
 
-  // 文字数を遅延ロード
+  // 文字数を遅延ロード（正確な文字数取得）
   const loadCharCount = async (work: WorkItem) => {
     if (work.charCount || loadingCharCounts.has(work.id)) return;
 
     setLoadingCharCounts(prev => new Set(prev).add(work.id));
 
-    const response = await window.electronAPI.fetchCharCount(work.url);
+    const response = await window.electronAPI.fetchAccurateCharCount(work.url);
     
     if (response.success && response.charCount) {
+      // worksステートを更新
       setWorks(prevWorks => 
         prevWorks.map(w => 
           w.id === work.id ? { ...w, charCount: response.charCount } : w
@@ -265,6 +290,56 @@ export default function App() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+
+        {/* フィルター・ソートエリア */}
+        <div style={{ marginTop: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            style={{
+              padding: '6px 10px',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              fontSize: '12px',
+              background: 'white'
+            }}
+          >
+            <option value="none">並び替えなし</option>
+            <option value="charCount-asc">短い順</option>
+            <option value="charCount-desc">長い順</option>
+          </select>
+
+          <div style={{ display: 'flex', gap: '5px', alignItems: 'center', fontSize: '12px' }}>
+            <span>文字数:</span>
+            <input
+              type="number"
+              placeholder="最小"
+              value={charCountFilter.min || ''}
+              onChange={(e) => setCharCountFilter(prev => ({ ...prev, min: parseInt(e.target.value) || 0 }))}
+              style={{
+                width: '80px',
+                padding: '4px 6px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '12px'
+              }}
+            />
+            <span>〜</span>
+            <input
+              type="number"
+              placeholder="最大"
+              value={charCountFilter.max === 1000000 ? '' : charCountFilter.max}
+              onChange={(e) => setCharCountFilter(prev => ({ ...prev, max: parseInt(e.target.value) || 1000000 }))}
+              style={{
+                width: '80px',
+                padding: '4px 6px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '12px'
+              }}
+            />
           </div>
         </div>
 
