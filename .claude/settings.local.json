@@ -35,7 +35,8 @@
       "Bash(pkill:*)",
       "mcp__serena__create_text_file",
       "mcp__serena__replace_symbol_body",
-      "mcp__serena__insert_after_symbol"
+      "mcp__serena__insert_after_symbol",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

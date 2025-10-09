@@ -17,14 +17,22 @@
     "productName": "青空文庫クローラー",
     "files": [
       "dist/**/*",
+      "build/icon.png",
       "package.json"
     ],
     "mac": {
+      "icon": "build/icon.png",
       "category": "public.app-category.utilities",
       "target": [
         "dmg",
         "zip"
       ]
+    },
+    "win": {
+      "icon": "build/icon.png"
+    },
+    "linux": {
+      "icon": "build/icon.png"
     },
     "directories": {
       "output": "release"
