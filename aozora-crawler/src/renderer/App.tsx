@@ -15,6 +15,7 @@ declare global {
       downloadNovel: (url: string) => Promise<{ success: boolean; filePath?: string; error?: string }>;
       fetchWorks: (options?: { all?: boolean; authorIds?: string[] }) => Promise<{ success: boolean; data?: WorkItem[]; error?: string }>;
       clearCache: () => Promise<{ success: boolean; error?: string }>;
+      fetchCharCount: (url: string) => Promise<{ success: boolean; charCount?: number; error?: string }>;
       onDownloadProgress: (callback: (progress: { stage: string; percent: number }) => void) => void;
       getSavePath: () => Promise<string>;
       selectSavePath: () => Promise<{ success: boolean; path?: string }>;
@@ -37,6 +38,7 @@ export default function App() {
   const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [savePath, setSavePath] = useState<string>('');
   const [showSettings, setShowSettings] = useState(false);
+  const [loadingCharCounts, setLoadingCharCounts] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadWorks();
@@ -134,6 +136,38 @@ export default function App() {
     setSelectedAuthor('all');
     setShowSuggestions(false);
   };
+
+  // 文字数を遅延ロード
+  const loadCharCount = async (work: WorkItem) => {
+    if (work.charCount || loadingCharCounts.has(work.id)) return;
+
+    setLoadingCharCounts(prev => new Set(prev).add(work.id));
+
+    const response = await window.electronAPI.fetchCharCount(work.url);
+    
+    if (response.success && response.charCount) {
+      setWorks(prevWorks => 
+        prevWorks.map(w => 
+          w.id === work.id ? { ...w, charCount: response.charCount } : w
+        )
+      );
+    }
+
+    setLoadingCharCounts(prev => {
+      const next = new Set(prev);
+      next.delete(work.id);
+      return next;
+    });
+  };
+
+  // 表示される作品の文字数を取得
+  useEffect(() => {
+    filteredWorks.slice(0, 20).forEach(work => {
+      if (!work.charCount) {
+        loadCharCount(work);
+      }
+    });
+  }, [filteredWorks]);
 
   return (
     <div style={{ display: 'flex', height: '100vh', flexDirection: 'column' }}>
@@ -342,11 +376,15 @@ export default function App() {
               <div style={{ fontSize: '12px', color: '#666' }}>
                 {work.author} · {work.textType}
               </div>
-              {work.charCount && (
+              {work.charCount ? (
                 <div style={{ fontSize: '12px', color: '#888', marginTop: '3px' }}>
                   📊 約{work.charCount.toLocaleString()}字
                 </div>
-              )}
+              ) : loadingCharCounts.has(work.id) ? (
+                <div style={{ fontSize: '12px', color: '#bbb', marginTop: '3px' }}>
+                  ⏳ 文字数取得中...
+                </div>
+              ) : null}
             </div>
             
             <button

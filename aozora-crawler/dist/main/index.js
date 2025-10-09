@@ -98,6 +98,16 @@ electron_1.ipcMain.handle('get-metadata', async (_event, url) => {
         return { success: false, error: error.message };
     }
 });
+// 単一作品の文字数取得
+electron_1.ipcMain.handle('fetch-char-count', async (_event, url) => {
+    try {
+        const charCount = await indexFetcher.fetchCharCount(url);
+        return { success: true, charCount };
+    }
+    catch (error) {
+        return { success: false, error: error.message };
+    }
+});
 // 作品一覧取得
 electron_1.ipcMain.handle('fetch-works', async (_event, options) => {
     try {
@@ -120,6 +130,23 @@ electron_1.ipcMain.handle('fetch-works', async (_event, options) => {
             works = await indexFetcher.enrichWithCharCounts(works, 200);
             // キャッシュに保存
             await cacheManager.saveCache(works);
+        }
+        else {
+            // キャッシュから読み込んだ場合でも、文字数が欠けている作品があれば補完
+            const worksWithoutCharCount = works.filter(w => !w.charCount);
+            if (worksWithoutCharCount.length > 0) {
+                console.log(`📊 キャッシュに文字数情報がない作品を検出: ${worksWithoutCharCount.length}件`);
+                const enrichedWorks = await indexFetcher.enrichWithCharCounts(worksWithoutCharCount, 200);
+                // 文字数情報をマージ
+                const charCountMap = new Map(enrichedWorks.map(w => [w.id, w.charCount]));
+                works = works.map(w => ({
+                    ...w,
+                    charCount: w.charCount || charCountMap.get(w.id)
+                }));
+                // 更新されたキャッシュを保存
+                await cacheManager.saveCache(works);
+                console.log(`✅ 文字数情報を追加してキャッシュを更新しました`);
+            }
         }
         return { success: true, data: works };
     }

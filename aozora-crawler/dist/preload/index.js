@@ -6,6 +6,7 @@ const electronAPI = {
     getMetadata: (url) => electron_1.ipcRenderer.invoke('get-metadata', url),
     fetchWorks: (options) => electron_1.ipcRenderer.invoke('fetch-works', options),
     clearCache: () => electron_1.ipcRenderer.invoke('clear-cache'),
+    fetchCharCount: (url) => electron_1.ipcRenderer.invoke('fetch-char-count', url),
     onDownloadProgress: (callback) => {
         electron_1.ipcRenderer.on('download-progress', (_event, progress) => callback(progress));
     },
