@@ -197,7 +197,7 @@ export default function App() {
   return (
     <div style={{ display: 'flex', height: '100vh', flexDirection: 'column' }}>
       {/* ヘッダー */}
-      <div style={{ padding: '20px', borderBottom: '1px solid #ddd', background: 'white' }}>
+      <div style={{ padding: '20px', borderBottom: '1px solid #333', background: '#2a2a2a' }}>
         <h1 style={{ margin: 0, marginBottom: '15px' }}>📚 青空文庫クローラー</h1>
         
         {/* 検索・フィルターエリア */}
@@ -210,7 +210,7 @@ export default function App() {
             style={{
               flex: 1,
               padding: '10px',
-              border: '2px solid #ddd',
+              border: '2px solid #444',
               borderRadius: '6px',
               fontSize: '14px'
             }}
@@ -231,7 +231,7 @@ export default function App() {
               style={{
                 width: '100%',
                 padding: '10px 35px 10px 10px',
-                border: '2px solid #ddd',
+                border: '2px solid #444',
                 borderRadius: '6px',
                 fontSize: '14px'
               }}
@@ -263,12 +263,12 @@ export default function App() {
                   left: 0,
                   right: 0,
                   marginTop: '4px',
-                  background: 'white',
-                  border: '1px solid #ddd',
+                  background: '#1e1e1e',
+                  border: '1px solid #444',
                   borderRadius: '6px',
                   maxHeight: '300px',
                   overflowY: 'auto',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.5)',
                   zIndex: 1000
                 }}
               >
@@ -279,11 +279,11 @@ export default function App() {
                     style={{
                       padding: '10px',
                       cursor: 'pointer',
-                      borderBottom: '1px solid #f0f0f0',
+                      borderBottom: '1px solid #333',
                       transition: 'background 0.2s'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#333'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = '#1e1e1e'}
                   >
                     📝 {author}
                   </div>
@@ -300,10 +300,10 @@ export default function App() {
             onChange={(e) => setSortBy(e.target.value as any)}
             style={{
               padding: '6px 10px',
-              border: '1px solid #ddd',
+              border: '1px solid #444',
               borderRadius: '4px',
               fontSize: '12px',
-              background: 'white'
+              background: '#2a2a2a'
             }}
           >
             <option value="none">並び替えなし</option>
@@ -321,7 +321,7 @@ export default function App() {
               style={{
                 width: '80px',
                 padding: '4px 6px',
-                border: '1px solid #ddd',
+                border: '1px solid #444',
                 borderRadius: '4px',
                 fontSize: '12px'
               }}
@@ -335,7 +335,7 @@ export default function App() {
               style={{
                 width: '80px',
                 padding: '4px 6px',
-                border: '1px solid #ddd',
+                border: '1px solid #444',
                 borderRadius: '4px',
                 fontSize: '12px'
               }}
@@ -390,7 +390,7 @@ export default function App() {
           <div style={{
             marginTop: '15px',
             padding: '15px',
-            background: '#f5f5f5',
+            background: '#1e1e1e',
             borderRadius: '8px',
             border: '1px solid #ddd'
           }}>
@@ -399,8 +399,8 @@ export default function App() {
               <div style={{
                 flex: 1,
                 padding: '8px',
-                background: 'white',
-                border: '1px solid #ddd',
+                background: '#1e1e1e',
+                  border: '1px solid #444',
                 borderRadius: '4px',
                 fontSize: '12px',
                 wordBreak: 'break-all'
@@ -438,9 +438,9 @@ export default function App() {
             style={{
               padding: '15px',
               marginBottom: '10px',
-              background: 'white',
+              background: '#2a2a2a',
               borderRadius: '8px',
-              border: '1px solid #e0e0e0',
+              border: '1px solid #3a3a3a',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center'
@@ -483,7 +483,7 @@ export default function App() {
 
       {/* 進捗・結果表示 */}
       {(progress || result) && (
-        <div style={{ padding: '15px', borderTop: '1px solid #ddd', background: 'white' }}>
+        <div style={{ padding: '15px', borderTop: '1px solid #333', background: '#2a2a2a' }}>
           {progress && (
             <div>
               <div style={{ marginBottom: '8px', fontSize: '14px' }}>{progress.stage}</div>
@@ -504,8 +504,8 @@ export default function App() {
             <div
               style={{
                 padding: '10px',
-                background: result.type === 'success' ? '#e8f5e9' : '#ffebee',
-                color: result.type === 'success' ? '#388e3c' : '#c62828',
+                background: result.type === 'success' ? '#1b5e20' : '#b71c1c',
+                color: result.type === 'success' ? '#a5d6a7' : '#ffcdd2',
                 borderRadius: '6px',
                 fontSize: '14px'
               }}
