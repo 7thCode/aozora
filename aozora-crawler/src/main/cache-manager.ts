@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { app } from 'electron';
 import { WorkItem } from './index-fetcher';
+import { getSavePath } from './settings';
 
 interface CacheData {
   version: string;
@@ -16,7 +16,7 @@ export class CacheManager {
   private readonly CACHE_EXPIRY_DAYS = 7;
 
   constructor() {
-    this.cacheDir = path.join(app.getPath('userData'), 'cache');
+    this.cacheDir = path.join(getSavePath(), 'cache');
     this.cacheFile = path.join(this.cacheDir, 'works-cache.json');
   }
 

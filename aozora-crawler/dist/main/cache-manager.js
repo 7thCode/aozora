@@ -36,12 +36,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CacheManager = void 0;
 const fs = __importStar(require("fs/promises"));
 const path = __importStar(require("path"));
-const electron_1 = require("electron");
+const settings_1 = require("./settings");
 class CacheManager {
     constructor() {
         this.CACHE_VERSION = '1.0';
         this.CACHE_EXPIRY_DAYS = 7;
-        this.cacheDir = path.join(electron_1.app.getPath('userData'), 'cache');
+        this.cacheDir = path.join((0, settings_1.getSavePath)(), 'cache');
         this.cacheFile = path.join(this.cacheDir, 'works-cache.json');
     }
     /**

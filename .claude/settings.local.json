@@ -36,7 +36,9 @@
       "mcp__serena__create_text_file",
       "mcp__serena__replace_symbol_body",
       "mcp__serena__insert_after_symbol",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm --prefix ./aozora-crawler run package)",
+      "Bash(open release/mac-arm64/青空文庫クローラー.app)"
     ],
     "deny": [],
     "ask": []
