@@ -96,6 +96,85 @@ const filteredAuthors = authorInput.trim()
 
 ---
 
+## 2025-10-10: キャッシュ保存パスの設定化
+
+### 実装した機能
+キャッシュファイルの保存先をユーザー設定可能な保存パスに統合
+
+### 背景・課題
+- **問題点**: キャッシュが固定のapp.getPath('userData')配下に保存されていた
+- **改善ニーズ**: ダウンロードファイルと同じユーザー設定のディレクトリにキャッシュを配置したい
+
+### 解決策
+settings.tsのgetSavePath()を使用してキャッシュディレクトリを構築
+
+### 技術仕様
+
+#### 変更前
+```typescript
+import { app } from 'electron';
+this.cacheDir = path.join(app.getPath('userData'), 'cache');
+```
+
+#### 変更後
+```typescript
+import { getSavePath } from './settings';
+this.cacheDir = path.join(getSavePath(), 'cache');
+```
+
+### 実装詳細
+
+**cache-manager.ts (aozora-crawler/src/main/cache-manager.ts)**
+
+**現在の構造**:
+- CacheManagerクラス: キャッシュの読み書き・管理を担当
+- キャッシュファイル: `{保存パス}/cache/works-cache.json`
+- キャッシュバージョン: 1.0
+- 有効期限: 7日間
+
+**主要メソッド**:
+1. `saveCache(works)`: 作品データをキャッシュに保存
+2. `loadCache()`: キャッシュ読み込み（バージョン・期限チェック付き）
+3. `clearCache()`: キャッシュファイル削除
+4. `getCacheInfo()`: キャッシュ状態取得（存在確認、更新日時、件数、期限切れ判定）
+5. `ensureCacheDir()`: キャッシュディレクトリ自動作成
+
+**キャッシュデータ構造**:
+```typescript
+interface CacheData {
+  version: string;        // キャッシュフォーマットバージョン
+  lastUpdated: string;    // 最終更新日時 (ISO形式)
+  works: WorkItem[];      // 作品データ配列
+}
+```
+
+**依存関係**:
+- `settings.ts`: getSavePath() → ユーザー設定の保存パスを取得
+- `index-fetcher.ts`: WorkItem型定義（作品データ構造）
+
+### 変更ファイル
+- `aozora-crawler/src/main/cache-manager.ts`
+  - インポート: `app` → `getSavePath`に変更
+  - コンストラクタ: キャッシュディレクトリパスの構築方法を変更
+
+### 動作
+- ✅ ユーザー設定の保存パス配下にcacheディレクトリが作成される
+- ✅ 設定変更時も適切なディレクトリにキャッシュが配置される
+- ✅ 既存のキャッシュ機能（バージョン管理、期限管理）はそのまま維持
+
+### メリット
+- 🗂️ **一元管理**: ダウンロードファイルとキャッシュが同じ場所に配置
+- 🔧 **柔軟性**: ユーザーが保存先を変更するとキャッシュ位置も追従
+- 📁 **整理性**: プロジェクト関連ファイルがまとまる
+
+### 今後の考慮事項
+1. **保存パス変更時の挙動**: 既存キャッシュの移動や再生成ロジック
+2. **複数保存先対応**: 保存先ごとに異なるキャッシュを持つか検討
+3. **キャッシュサイズ管理**: 大量データ時のディスク使用量監視
+4. **キャッシュ有効期限**: 7日間が適切か運用で検証
+
+---
+
 ## プロジェクト情報
 
 ### 技術スタック
