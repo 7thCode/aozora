@@ -14,7 +14,7 @@
   },
   "build": {
     "appId": "com.aozora.crawler",
-    "productName": "青空文庫クローラー",
+    "productName": "aozora-crawler",
     "files": [
       "dist/**/*",
       "build/icon.png",

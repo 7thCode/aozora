@@ -38,7 +38,15 @@
       "mcp__serena__insert_after_symbol",
       "Bash(find:*)",
       "Bash(npm --prefix ./aozora-crawler run package)",
-      "Bash(open release/mac-arm64/青空文庫クローラー.app)"
+      "Bash(open release/mac-arm64/青空文庫クローラー.app)",
+      "Bash(tree -L 2 aozora-crawler)",
+      "Bash(mv aozora-crawler/src .)",
+      "Bash(mv aozora-crawler/package.json aozora-crawler/package-lock.json aozora-crawler/tsconfig.json aozora-crawler/tsconfig.node.json aozora-crawler/vite.config.ts .)",
+      "Bash(mv aozora-crawler/build .)",
+      "Bash(mv aozora-crawler/dist aozora-crawler/release .)",
+      "Bash(mv aozora-crawler/CLAUDE.md .)",
+      "Bash(rm -rf aozora-crawler)",
+      "Bash(tree -L 2 -I 'node_modules')"
     ],
     "deny": [],
     "ask": []
