@@ -1,5 +1,5 @@
 {
-  "name": "aozora-crawler",
+  "name": "aozora",
   "version": "1.0.0",
   "description": "",
   "main": "dist/main/index.js",
@@ -13,8 +13,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "build": {
-    "appId": "com.aozora.crawler",
-    "productName": "aozora-crawler",
+    "appId": "com.aozora",
+    "productName": "aozora",
     "files": [
       "dist/**/*",
       "build/icon.png",

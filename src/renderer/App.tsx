@@ -198,7 +198,7 @@ export default function App() {
     <div style={{ display: 'flex', height: '100vh', flexDirection: 'column' }}>
       {/* ヘッダー */}
       <div style={{ padding: '20px', borderBottom: '1px solid #333', background: '#2a2a2a' }}>
-        <h1 style={{ margin: 0, marginBottom: '15px' }}>📚 青空文庫クローラー</h1>
+        <h1 style={{ margin: 0, marginBottom: '15px' }}>📚 aozora</h1>
         
         {/* 検索・フィルターエリア */}
         <div style={{ display: 'flex', gap: '10px' }}>

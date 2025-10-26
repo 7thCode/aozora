@@ -46,7 +46,9 @@
       "Bash(mv aozora-crawler/dist aozora-crawler/release .)",
       "Bash(mv aozora-crawler/CLAUDE.md .)",
       "Bash(rm -rf aozora-crawler)",
-      "Bash(tree -L 2 -I 'node_modules')"
+      "Bash(tree -L 2 -I 'node_modules')",
+      "mcp__serena__list_memories",
+      "Read(//Users/oda/.claude/**)"
     ],
     "deny": [],
     "ask": []
