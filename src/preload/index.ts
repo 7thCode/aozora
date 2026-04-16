@@ -11,6 +11,16 @@ export interface ElectronAPI {
   getSavePath: () => Promise<string>;
   selectSavePath: () => Promise<{ success: boolean; path?: string }>;
   checkSavePath: (path: string) => Promise<boolean>;
+  // LLM
+  llmGetModelPath: () => Promise<string>;
+  llmSelectModel: () => Promise<{ success: boolean; path?: string }>;
+  llmInit: (modelPath?: string) => Promise<{ success: boolean; error?: string }>;
+  llmSummarize: (text: string) => Promise<{ success: boolean; result?: string; error?: string }>;
+  llmStatus: () => Promise<{ ready: boolean; modelPath: string | null }>;
+  llmDispose: () => Promise<{ success: boolean }>;
+  llmSummarizeWork: (cardUrl: string) => Promise<{ success: boolean; result?: string; error?: string }>;
+  onLlmLoadProgress: (callback: (progress: number) => void) => void;
+  onLlmToken: (callback: (token: string) => void) => void;
 }
 
 const electronAPI: ElectronAPI = {
@@ -25,7 +35,21 @@ const electronAPI: ElectronAPI = {
   },
   getSavePath: () => ipcRenderer.invoke('get-save-path'),
   selectSavePath: () => ipcRenderer.invoke('select-save-path'),
-  checkSavePath: (path: string) => ipcRenderer.invoke('check-save-path', path)
+  checkSavePath: (path: string) => ipcRenderer.invoke('check-save-path', path),
+  // LLM
+  llmGetModelPath: () => ipcRenderer.invoke('llm:get-model-path'),
+  llmSelectModel: () => ipcRenderer.invoke('llm:select-model'),
+  llmInit: (modelPath?: string) => ipcRenderer.invoke('llm:init', modelPath),
+  llmSummarize: (text: string) => ipcRenderer.invoke('llm:summarize', text),
+  llmStatus: () => ipcRenderer.invoke('llm:status'),
+  llmDispose: () => ipcRenderer.invoke('llm:dispose'),
+  llmSummarizeWork: (cardUrl: string) => ipcRenderer.invoke('llm:summarize-work', cardUrl),
+  onLlmLoadProgress: (callback: (progress: number) => void) => {
+    ipcRenderer.on('llm:load-progress', (_event, progress) => callback(progress));
+  },
+  onLlmToken: (callback: (token: string) => void) => {
+    ipcRenderer.on('llm:token', (_event, token) => callback(token));
+  }
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

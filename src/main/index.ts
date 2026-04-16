@@ -4,7 +4,8 @@ import * as fs from 'fs';
 import { AozoraDownloader } from './downloader';
 import { AozoraIndexFetcher } from './index-fetcher';
 import { CacheManager } from './cache-manager';
-import { getSavePath, setSavePath } from './settings';
+import { getSavePath, setSavePath, getModelPath, setModelPath } from './settings';
+import { initializeLlm, summarize, isReady, getLoadedModelPath, disposeLlm } from './summarizer';
 
 let mainWindow: BrowserWindow | null = null;
 const downloader = new AozoraDownloader();
@@ -176,4 +177,73 @@ ipcMain.handle('select-save-path', async () => {
 
 ipcMain.handle('check-save-path', async (_event, checkPath: string) => {
   return fs.existsSync(checkPath);
+});
+
+// LLM関連
+ipcMain.handle('llm:get-model-path', () => {
+  return getModelPath();
+});
+
+ipcMain.handle('llm:select-model', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    title: 'GGUFモデルファイルを選択',
+    buttonLabel: '選択',
+    filters: [{ name: 'GGUF Model', extensions: ['gguf'] }]
+  });
+
+  if (!result.canceled && result.filePaths.length > 0) {
+    const modelPath = result.filePaths[0];
+    setModelPath(modelPath);
+    return { success: true, path: modelPath };
+  }
+  return { success: false };
+});
+
+ipcMain.handle('llm:init', async (event, modelPath?: string) => {
+  const targetPath = modelPath || getModelPath();
+  if (!targetPath) return { success: false, error: 'モデルパスが設定されていません' };
+
+  try {
+    await initializeLlm(targetPath, (progress) => {
+      event.sender.send('llm:load-progress', progress);
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+ipcMain.handle('llm:summarize', async (event, text: string) => {
+  try {
+    let result = '';
+    result = await summarize(text, (token) => {
+      event.sender.send('llm:token', token);
+    });
+    return { success: true, result };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+ipcMain.handle('llm:status', () => {
+  return { ready: isReady(), modelPath: getLoadedModelPath() };
+});
+
+ipcMain.handle('llm:dispose', async () => {
+  await disposeLlm();
+  return { success: true };
+});
+
+ipcMain.handle('llm:summarize-work', async (event, cardUrl: string) => {
+  try {
+    const text = await downloader.fetchPlainText(cardUrl);
+    let result = '';
+    result = await summarize(text, (token) => {
+      event.sender.send('llm:token', token);
+    });
+    return { success: true, result };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
 });

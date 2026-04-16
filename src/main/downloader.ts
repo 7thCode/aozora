@@ -101,8 +101,32 @@ export class AozoraDownloader {
   }
 
   /**
-   * 本文取得
+   * 要約用プレーンテキスト取得
    */
+  async fetchPlainText(cardUrl: string): Promise<string> {
+    const metadata = await this.fetchMetadata(cardUrl);
+    if (!metadata.xhtmlUrl) throw new Error('XHTML版URLが見つかりません');
+
+    const response = await axios.get(metadata.xhtmlUrl, {
+      headers: { 'User-Agent': 'AozoraCrawler/1.0' },
+      responseType: 'arraybuffer'
+    });
+
+    const decoder = new TextDecoder('shift_jis');
+    const html = decoder.decode(response.data);
+    const $ = cheerio.load(html);
+
+    // ルビ（読み仮名）を除去
+    $('rt, rp').remove();
+
+    // 本文エリアを抽出
+    const mainText = $('.main_text, #main_text, .honbun').text()
+      || $('body').text();
+
+    // 空白・改行を正規化
+    return mainText.replace(/\s+/g, ' ').trim().slice(0, 4000);
+  }
+
   /**
    * XHTML本文取得（そのまま保存）
    */
