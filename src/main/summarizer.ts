@@ -26,7 +26,7 @@ export async function initializeLlm(
   const context = await model.createContext({ contextSize: 4096 });
   session = new LlamaChatSession({
     contextSequence: context.getSequence(),
-    systemPrompt: 'あなたは日本語テキストの要約を行うアシスタントです。簡潔で正確な要約を提供してください。'
+    systemPrompt: 'あなたは日本語テキストの要約を行うアシスタントです。回答は必ずMarkdown形式で出力してください。'
   });
 
   loadedModelPath = modelPath;
@@ -34,12 +34,13 @@ export async function initializeLlm(
 
 export async function summarize(
   text: string,
-  onToken?: (token: string) => void
+  onToken?: (token: string) => void,
+  maxChars = 300
 ): Promise<string> {
   if (!session) throw new Error('LLMが初期化されていません。先にモデルを読み込んでください。');
 
   const truncated = text.slice(0, 3000);
-  const prompt = `次の文章を300字以内で要約してください:\n\n${truncated}`;
+  const prompt = `次の文章を${maxChars}字以内でMarkdown形式で要約してください。見出し・箇条書き・強調などを適切に使ってください:\n\n${truncated}`;
 
   return await session.prompt(prompt, {
     temperature: 0.3,

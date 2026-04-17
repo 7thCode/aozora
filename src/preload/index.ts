@@ -18,9 +18,22 @@ export interface ElectronAPI {
   llmSummarize: (text: string) => Promise<{ success: boolean; result?: string; error?: string }>;
   llmStatus: () => Promise<{ ready: boolean; modelPath: string | null }>;
   llmDispose: () => Promise<{ success: boolean }>;
-  llmSummarizeWork: (cardUrl: string) => Promise<{ success: boolean; result?: string; error?: string }>;
+  llmSummarizeWork: (cardUrl: string, maxChars?: number) => Promise<{ success: boolean; result?: string; error?: string }>;
   onLlmLoadProgress: (callback: (progress: number) => void) => void;
   onLlmToken: (callback: (token: string) => void) => void;
+  // モデルストア
+  modelsGetPreset: () => Promise<any[]>;
+  modelsList: () => Promise<{ models: any[] }>;
+  modelsDelete: (modelId: string) => Promise<{ success: boolean }>;
+  modelsDownloadStart: (modelConfig: any) => Promise<{ success: boolean; filePath?: string; downloadId?: string; error?: string }>;
+  modelsDownloadCancel: (downloadId: string) => Promise<{ success: boolean }>;
+  modelsHfSearch: (options: any) => Promise<{ success: boolean; models: any[] }>;
+  modelsDirGet: () => Promise<{ success: boolean; path: string }>;
+  modelsDirSelect: () => Promise<{ success: boolean; path?: string }>;
+  modelsDirSet: (dirPath: string) => Promise<{ success: boolean }>;
+  onModelsDownloadProgress: (callback: (data: any) => void) => void;
+  onModelsDownloadComplete: (callback: (data: any) => void) => void;
+  onModelsDownloadError: (callback: (data: any) => void) => void;
 }
 
 const electronAPI: ElectronAPI = {
@@ -43,13 +56,32 @@ const electronAPI: ElectronAPI = {
   llmSummarize: (text: string) => ipcRenderer.invoke('llm:summarize', text),
   llmStatus: () => ipcRenderer.invoke('llm:status'),
   llmDispose: () => ipcRenderer.invoke('llm:dispose'),
-  llmSummarizeWork: (cardUrl: string) => ipcRenderer.invoke('llm:summarize-work', cardUrl),
+  llmSummarizeWork: (cardUrl: string, maxChars?: number) => ipcRenderer.invoke('llm:summarize-work', cardUrl, maxChars),
   onLlmLoadProgress: (callback: (progress: number) => void) => {
     ipcRenderer.on('llm:load-progress', (_event, progress) => callback(progress));
   },
   onLlmToken: (callback: (token: string) => void) => {
     ipcRenderer.on('llm:token', (_event, token) => callback(token));
-  }
+  },
+  // モデルストア
+  modelsGetPreset: () => ipcRenderer.invoke('models:get-preset'),
+  modelsList: () => ipcRenderer.invoke('models:list'),
+  modelsDelete: (modelId: string) => ipcRenderer.invoke('models:delete', modelId),
+  modelsDownloadStart: (modelConfig: any) => ipcRenderer.invoke('models:download-start', modelConfig),
+  modelsDownloadCancel: (downloadId: string) => ipcRenderer.invoke('models:download-cancel', downloadId),
+  modelsHfSearch: (options: any) => ipcRenderer.invoke('models:hf-search', options),
+  modelsDirGet: () => ipcRenderer.invoke('models:dir-get'),
+  modelsDirSelect: () => ipcRenderer.invoke('models:dir-select'),
+  modelsDirSet: (dirPath: string) => ipcRenderer.invoke('models:dir-set', dirPath),
+  onModelsDownloadProgress: (callback: (data: any) => void) => {
+    ipcRenderer.on('download:progress', (_event, data) => callback(data));
+  },
+  onModelsDownloadComplete: (callback: (data: any) => void) => {
+    ipcRenderer.on('download:complete', (_event, data) => callback(data));
+  },
+  onModelsDownloadError: (callback: (data: any) => void) => {
+    ipcRenderer.on('download:error', (_event, data) => callback(data));
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

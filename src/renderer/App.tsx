@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import ModelStore from './components/ModelStore';
 
 interface WorkItem {
   id: string;
@@ -23,11 +25,13 @@ declare global {
       checkSavePath: (path: string) => Promise<boolean>;
       llmStatus: () => Promise<{ ready: boolean; modelPath: string | null }>;
       llmInit: (modelPath?: string) => Promise<{ success: boolean; error?: string }>;
-      llmSummarizeWork: (cardUrl: string) => Promise<{ success: boolean; result?: string; error?: string }>;
+      llmSummarizeWork: (cardUrl: string, maxChars?: number) => Promise<{ success: boolean; result?: string; error?: string }>;
       llmGetModelPath: () => Promise<string>;
       llmSelectModel: () => Promise<{ success: boolean; path?: string }>;
       onLlmLoadProgress: (callback: (progress: number) => void) => void;
       onLlmToken: (callback: (token: string) => void) => void;
+      modelsList: () => Promise<{ models: any[] }>;
+      onModelsDownloadComplete: (callback: (data: any) => void) => void;
     };
   }
 }
@@ -45,7 +49,7 @@ export default function App() {
   const [progress, setProgress] = useState<{ stage: string; percent: number } | null>(null);
   const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [savePath, setSavePath] = useState<string>('');
-  const [showSettings, setShowSettings] = useState(false);
+  const [showModelStore, setShowModelStore] = useState(false);
   const [loadingCharCounts, setLoadingCharCounts] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<'none' | 'charCount-asc' | 'charCount-desc'>('none');
   const [charCountFilter, setCharCountFilter] = useState<{ min: number; max: number }>({ min: 0, max: 1000000 });
@@ -53,6 +57,8 @@ export default function App() {
   const [llmInitializing, setLlmInitializing] = useState(false);
   const [llmLoadProgress, setLlmLoadProgress] = useState(0);
   const [modelPath, setModelPath] = useState('');
+  const [localModels, setLocalModels] = useState<{ id: string; name: string; path: string }[]>([]);
+  const [summaryLength, setSummaryLength] = useState(300);
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [summarizingId, setSummarizingId] = useState<string | null>(null);
   const [streamingText, setStreamingText] = useState('');
@@ -65,6 +71,14 @@ export default function App() {
     // LLM初期化状態とモデルパスを確認
     window.electronAPI.llmStatus().then(({ ready }) => setLlmReady(ready));
     window.electronAPI.llmGetModelPath().then(setModelPath);
+
+    // ローカルモデル一覧を取得
+    const loadLocalModels = () =>
+      window.electronAPI.modelsList().then((res: any) => setLocalModels(res.models || []));
+    loadLocalModels();
+
+    // ダウンロード完了時に一覧を更新
+    window.electronAPI.onModelsDownloadComplete(() => loadLocalModels());
 
     // モデルロード進捗
     window.electronAPI.onLlmLoadProgress((p) => setLlmLoadProgress(p));
@@ -158,21 +172,6 @@ export default function App() {
     }
   };
 
-  const handleSelectSavePath = async () => {
-    const response = await window.electronAPI.selectSavePath();
-    if (response.success && response.path) {
-      setSavePath(response.path);
-      setResult({ type: 'success', message: `保存先を変更しました: ${response.path}` });
-    }
-  };
-
-  const handleSelectModel = async () => {
-    const response = await window.electronAPI.llmSelectModel();
-    if (response.success && response.path) {
-      setModelPath(response.path);
-      setLlmReady(false);
-    }
-  };
 
   const authors = Array.from(new Set(works.map(w => w.author))).sort();
 
@@ -222,26 +221,18 @@ export default function App() {
   const handleSummarize = async (work: WorkItem) => {
     if (summarizingId) return;
 
-    // モデル未初期化なら先にinit
     if (!llmReady) {
-      setLlmInitializing(true);
-      setLlmLoadProgress(0);
-      const initRes = await window.electronAPI.llmInit();
-      setLlmInitializing(false);
-      if (!initRes.success) {
-        setSummaries((prev) => ({
-          ...prev,
-          [work.id]: `エラー: ${initRes.error || 'モデルの読み込みに失敗しました。設定からGGUFファイルを選択してください。'}`
-        }));
-        return;
-      }
-      setLlmReady(true);
+      setSummaries((prev) => ({
+        ...prev,
+        [work.id]: 'エラー: モデルが読み込まれていません。上のドロップダウンからモデルを選択してください。'
+      }));
+      return;
     }
 
     setSummarizingId(work.id);
     setStreamingText('');
 
-    const res = await window.electronAPI.llmSummarizeWork(work.url);
+    const res = await window.electronAPI.llmSummarizeWork(work.url, summaryLength);
 
     setSummaries((prev) => ({
       ...prev,
@@ -360,7 +351,7 @@ export default function App() {
         </div>
 
         {/* フィルター・ソートエリア */}
-        <div style={{ marginTop: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div style={{ marginTop: '10px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
@@ -378,7 +369,21 @@ export default function App() {
           </select>
 
           <div style={{ display: 'flex', gap: '5px', alignItems: 'center', fontSize: '12px' }}>
-            <span>文字数:</span>
+            <span>要約:</span>
+            <input
+              type="number"
+              min={50}
+              max={2000}
+              step={50}
+              value={summaryLength}
+              onChange={(e) => setSummaryLength(parseInt(e.target.value) || 300)}
+              style={{ width: '70px', padding: '4px 6px', border: '1px solid #9C27B0', borderRadius: '4px', fontSize: '12px' }}
+            />
+            <span>字</span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '5px', alignItems: 'center', fontSize: '12px' }}>
+            <span>作品文字数:</span>
             <input
               type="number"
               placeholder="最小"
@@ -411,19 +416,61 @@ export default function App() {
 
         <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: '12px', color: '#666' }}>
-            {loading ? '読み込み中...' : `${filteredWorks.length} / ${works.length} 作品`}
+            {loading ? (
+              <span><span className="spinner" />読み込み中...</span>
+            ) : `${filteredWorks.length} / ${works.length} 作品`}
             {savePath && (
               <div style={{ marginTop: '4px', fontSize: '11px', color: '#999' }}>
                 💾 保存先: {savePath}
               </div>
             )}
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {/* モデル選択ドロップダウン */}
+            <select
+              value={modelPath}
+              onChange={async (e) => {
+                const selected = e.target.value;
+                if (!selected) return;
+                setModelPath(selected);
+                setLlmReady(false);
+                setLlmInitializing(true);
+                setLlmLoadProgress(0);
+                const res = await window.electronAPI.llmInit(selected);
+                setLlmInitializing(false);
+                if (res.success) setLlmReady(true);
+              }}
+              style={{
+                padding: '6px 10px',
+                border: '1px solid #9C27B0',
+                borderRadius: '4px',
+                fontSize: '12px',
+                background: '#fff',
+                color: '#333',
+                maxWidth: '220px'
+              }}
+            >
+              <option value="">🤖 モデルを選択...</option>
+              {localModels.map((m) => (
+                <option key={m.id} value={m.path}>
+                  {llmReady && modelPath === m.path ? '✅ ' : ''}{m.name}
+                </option>
+              ))}
+            </select>
+            {llmInitializing && (
+              <span style={{ fontSize: '12px', color: '#7B1FA2', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span className="spinner" style={{ borderTopColor: '#7B1FA2' }} />
+                {llmLoadProgress}%
+              </span>
+            )}
+            {llmReady && !llmInitializing && (
+              <span style={{ fontSize: '12px', color: '#4CAF50' }}>✅ 準備完了</span>
+            )}
             <button
-              onClick={() => setShowSettings(!showSettings)}
+              onClick={() => setShowModelStore(true)}
               style={{
                 padding: '6px 12px',
-                background: '#757575',
+                background: '#7B1FA2',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -431,7 +478,7 @@ export default function App() {
                 fontSize: '12px'
               }}
             >
-              ⚙️ 設定
+              🤖 モデル
             </button>
             <button
               onClick={handleFetchAll}
@@ -451,83 +498,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* 設定パネル */}
-        {showSettings && (
-          <div style={{
-            marginTop: '15px',
-            padding: '15px',
-            background: '#ffffff',
-            borderRadius: '8px',
-            border: '1px solid #ddd'
-          }}>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>保存先設定</h3>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <div style={{
-                flex: 1,
-                padding: '8px',
-                background: '#f9f9f9',
-                  border: '1px solid #ccc',
-                borderRadius: '4px',
-                fontSize: '12px',
-                wordBreak: 'break-all'
-              }}>
-                {savePath || 'デフォルト: Downloads/aozora'}
-              </div>
-              <button
-                onClick={handleSelectSavePath}
-                style={{
-                  padding: '8px 16px',
-                  background: '#4CAF50',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                📁 参照...
-              </button>
-            </div>
-            <div style={{ marginTop: '8px', fontSize: '11px', color: '#666' }}>
-              ※ ダウンロード時に保存先が存在しない場合はエラーになります
-            </div>
-
-            <h3 style={{ margin: '16px 0 10px 0', fontSize: '14px' }}>LLMモデル設定</h3>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <div style={{
-                flex: 1,
-                padding: '8px',
-                background: '#f9f9f9',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                fontSize: '11px',
-                wordBreak: 'break-all',
-                color: modelPath ? '#333' : '#999'
-              }}>
-                {modelPath || 'GGUFファイルが未設定'}
-              </div>
-              <button
-                onClick={handleSelectModel}
-                style={{
-                  padding: '8px 16px',
-                  background: '#7B1FA2',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                📂 GGUFを選択
-              </button>
-            </div>
-            <div style={{ marginTop: '6px', fontSize: '11px', color: '#666' }}>
-              ※ 状態: {llmReady ? '✅ 読み込み済み' : modelPath ? '⏸ 未読み込み（要約ボタン押下時に自動ロード）' : '❌ 未設定'}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 作品リスト */}
@@ -607,36 +577,34 @@ export default function App() {
                   background: '#f8f4ff',
                   borderLeft: '3px solid #9C27B0',
                   borderRadius: '4px',
-                  fontSize: '13px',
-                  lineHeight: '1.7',
-                  color: '#333',
-                  whiteSpace: 'pre-wrap'
                 }}>
-                  {displayText}
-                  {isSummarizing && <span style={{ opacity: 0.5 }}>▌</span>}
+                  <div className="markdown-body">
+                    <ReactMarkdown>{displayText}</ReactMarkdown>
+                    {isSummarizing && <span style={{ opacity: 0.5 }}>▌</span>}
+                  </div>
                 </div>
               )}
 
-              {/* モデルロード中プログレス */}
-              {llmInitializing && !isSummarizing && (
-                <div style={{ marginTop: '10px' }}>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
-                    モデル読み込み中... {llmLoadProgress}%
-                  </div>
-                  <div style={{ background: '#ddd', borderRadius: '4px', height: '6px', overflow: 'hidden' }}>
-                    <div style={{
-                      width: `${llmLoadProgress}%`,
-                      height: '100%',
-                      background: '#9C27B0',
-                      transition: 'width 0.3s'
-                    }} />
-                  </div>
-                </div>
-              )}
             </div>
           );
         })}
       </div>
+
+      {/* モデルストア */}
+      {showModelStore && (
+        <ModelStore
+          onClose={() => setShowModelStore(false)}
+          onModelSelected={async (path) => {
+            setModelPath(path);
+            setLlmReady(false);
+            setLlmInitializing(true);
+            setLlmLoadProgress(0);
+            const res = await window.electronAPI.llmInit(path);
+            setLlmInitializing(false);
+            if (res.success) setLlmReady(true);
+          }}
+        />
+      )}
 
       {/* 進捗・結果表示 */}
       {(progress || result) && (

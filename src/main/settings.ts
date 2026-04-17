@@ -5,12 +5,16 @@ import * as path from 'path';
 interface Settings {
   savePath: string;
   modelPath: string;
+  modelsDirectory: string;
+  hfToken: string;
 }
 
 const store: any = new Store<Settings>({
   defaults: {
     savePath: path.join(app.getPath('downloads'), 'aozora'),
-    modelPath: ''
+    modelPath: '',
+    modelsDirectory: path.join(app.getPath('userData'), 'models'),
+    hfToken: '',
   }
 });
 
@@ -28,4 +32,20 @@ export const getModelPath = (): string => {
 
 export const setModelPath = (newPath: string): void => {
   store.set('modelPath', newPath);
+};
+
+export const getModelsDirectory = (): string => {
+  return store.get('modelsDirectory') as string;
+};
+
+export const setModelsDirectory = (newPath: string): void => {
+  store.set('modelsDirectory', newPath);
+};
+
+export const getHfToken = (): string => {
+  return store.get('hfToken') as string;
+};
+
+export const setHfToken = (token: string): void => {
+  store.set('hfToken', token);
 };

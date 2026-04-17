@@ -4,13 +4,20 @@ import * as fs from 'fs';
 import { AozoraDownloader } from './downloader';
 import { AozoraIndexFetcher } from './index-fetcher';
 import { CacheManager } from './cache-manager';
-import { getSavePath, setSavePath, getModelPath, setModelPath } from './settings';
+import { getSavePath, setSavePath, getModelPath, setModelPath, getModelsDirectory, setModelsDirectory, getHfToken } from './settings';
 import { initializeLlm, summarize, isReady, getLoadedModelPath, disposeLlm } from './summarizer';
+import { ModelManager } from './model-manager';
+import { ModelDownloader } from './model-downloader';
+import { searchHuggingFaceModels } from './hf-search';
+import * as fsSync from 'fs';
+import * as nodePath from 'path';
 
 let mainWindow: BrowserWindow | null = null;
 const downloader = new AozoraDownloader();
 const indexFetcher = new AozoraIndexFetcher();
 const cacheManager = new CacheManager();
+let modelManager: ModelManager | null = null;
+let modelDownloader: ModelDownloader | null = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -37,7 +44,13 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  createWindow();
+  const modelsDir = getModelsDirectory();
+  modelManager = new ModelManager(modelsDir);
+  await modelManager.initialize();
+  modelDownloader = new ModelDownloader(mainWindow!, modelsDir, getHfToken());
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -235,13 +248,73 @@ ipcMain.handle('llm:dispose', async () => {
   return { success: true };
 });
 
-ipcMain.handle('llm:summarize-work', async (event, cardUrl: string) => {
+// ===== モデルストア =====
+ipcMain.handle('models:get-preset', async () => {
+  const jsonPath = nodePath.join(__dirname, '../../src/shared/preset-models.json');
+  const raw = fsSync.readFileSync(jsonPath, 'utf-8');
+  return JSON.parse(raw).models;
+});
+
+ipcMain.handle('models:list', async () => {
+  if (!modelManager) return { models: [] };
+  const models = await modelManager.listModels();
+  return { models };
+});
+
+ipcMain.handle('models:delete', async (_event, modelId: string) => {
+  if (!modelManager) return { success: false };
+  await modelManager.deleteModel(modelId);
+  return { success: true };
+});
+
+ipcMain.handle('models:download-start', async (_event, modelConfig: any) => {
+  if (!modelDownloader) return { success: false, error: '初期化中' };
+  const result = await modelDownloader.downloadModel(modelConfig);
+  return result;
+});
+
+ipcMain.handle('models:download-cancel', (_event, downloadId: string) => {
+  if (!modelDownloader) return { success: false };
+  return modelDownloader.cancelDownload(downloadId);
+});
+
+ipcMain.handle('models:hf-search', async (_event, options: any) => {
+  const models = await searchHuggingFaceModels({ ...options, hfToken: getHfToken() });
+  return { success: true, models };
+});
+
+ipcMain.handle('models:dir-get', () => {
+  return { success: true, path: getModelsDirectory() };
+});
+
+ipcMain.handle('models:dir-select', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+    title: 'モデル保存先を選択',
+    buttonLabel: '選択',
+  });
+  if (!result.canceled && result.filePaths.length > 0) {
+    return { success: true, path: result.filePaths[0] };
+  }
+  return { success: false };
+});
+
+ipcMain.handle('models:dir-set', async (_event, dirPath: string) => {
+  setModelsDirectory(dirPath);
+  modelManager?.setModelsDirectory(dirPath);
+  modelDownloader?.setModelsDirectory(dirPath);
+  await modelManager?.initialize();
+  return { success: true };
+});
+
+// ===== LLM 要約（作品テキスト）=====
+ipcMain.handle('llm:summarize-work', async (event, cardUrl: string, maxChars = 300) => {
   try {
     const text = await downloader.fetchPlainText(cardUrl);
     let result = '';
     result = await summarize(text, (token) => {
       event.sender.send('llm:token', token);
-    });
+    }, maxChars);
     return { success: true, result };
   } catch (error) {
     return { success: false, error: (error as Error).message };

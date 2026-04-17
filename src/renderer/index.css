@@ -13,3 +13,69 @@ body {
 #root {
   height: 100vh;
 }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #bbb;
+  border-top-color: #7B1FA2;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.markdown-body {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #333;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 {
+  margin: 0.6em 0 0.3em;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.markdown-body p {
+  margin: 0.4em 0;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0.3em 0;
+  padding-left: 1.4em;
+}
+
+.markdown-body li {
+  margin: 0.15em 0;
+}
+
+.markdown-body strong {
+  font-weight: bold;
+}
+
+.markdown-body em {
+  font-style: italic;
+}
+
+.markdown-body code {
+  background: #ede7f6;
+  border-radius: 3px;
+  padding: 0 3px;
+  font-size: 0.9em;
+}
+
+.markdown-body blockquote {
+  border-left: 2px solid #b39ddb;
+  margin: 0.4em 0;
+  padding-left: 0.8em;
+  color: #555;
+}
