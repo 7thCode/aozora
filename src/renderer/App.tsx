@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import ModelStore from './components/ModelStore';
 
 interface WorkItem {
@@ -579,7 +580,7 @@ export default function App() {
                   borderRadius: '4px',
                 }}>
                   <div className="markdown-body">
-                    <ReactMarkdown>{displayText}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayText}</ReactMarkdown>
                     {isSummarizing && <span style={{ opacity: 0.5 }}>▌</span>}
                   </div>
                 </div>

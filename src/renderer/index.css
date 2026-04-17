@@ -73,6 +73,29 @@ body {
   font-size: 0.9em;
 }
 
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5em 0;
+  font-size: 0.9em;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid #c8b8e0;
+  padding: 4px 10px;
+  text-align: left;
+}
+
+.markdown-body th {
+  background: #ede7f6;
+  font-weight: bold;
+}
+
+.markdown-body tr:nth-child(even) td {
+  background: #f9f5ff;
+}
+
 .markdown-body blockquote {
   border-left: 2px solid #b39ddb;
   margin: 0.4em 0;
