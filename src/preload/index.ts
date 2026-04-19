@@ -37,6 +37,17 @@ export interface ElectronAPI {
   onModelsDownloadProgress: (callback: (data: any) => void) => void;
   onModelsDownloadComplete: (callback: (data: any) => void) => void;
   onModelsDownloadError: (callback: (data: any) => void) => void;
+  // 設定ダイアログ
+  settingsGetAll: () => Promise<{
+    temperature: number; maxTokens: number; savePath: string; modelsDirectory: string;
+    hfToken: string; selectedProvider: string;
+    openaiApiKey: string; openaiModel: string;
+    anthropicApiKey: string; anthropicModel: string;
+    geminiApiKey: string; geminiModel: string;
+  }>;
+  settingsSetTemperature: (v: number) => Promise<{ success: boolean }>;
+  settingsSetMaxTokens: (v: number) => Promise<{ success: boolean }>;
+  settingsSetHfToken: (t: string) => Promise<{ success: boolean }>;
 }
 
 const electronAPI: ElectronAPI = {
@@ -89,6 +100,11 @@ const electronAPI: ElectronAPI = {
   onModelsDownloadError: (callback: (data: any) => void) => {
     ipcRenderer.on('download:error', (_event, data) => callback(data));
   },
+  // 設定ダイアログ
+  settingsGetAll: () => ipcRenderer.invoke('settings:get-all'),
+  settingsSetTemperature: (v: number) => ipcRenderer.invoke('settings:set-temperature', v),
+  settingsSetMaxTokens: (v: number) => ipcRenderer.invoke('settings:set-max-tokens', v),
+  settingsSetHfToken: (t: string) => ipcRenderer.invoke('settings:set-hf-token', t),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

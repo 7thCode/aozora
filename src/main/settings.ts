@@ -14,6 +14,8 @@ interface Settings {
   anthropicModel: string;
   geminiApiKey: string;
   geminiModel: string;
+  temperature: number;
+  maxTokens: number;
 }
 
 const store: any = new Store<Settings>({
@@ -29,6 +31,8 @@ const store: any = new Store<Settings>({
     anthropicModel: 'claude-haiku-4-5-20251001',
     geminiApiKey: '',
     geminiModel: 'gemini-1.5-flash',
+    temperature: 0.3,
+    maxTokens: 1024,
   }
 });
 
@@ -81,3 +85,8 @@ export const getGeminiApiKey = (): string => store.get('geminiApiKey') as string
 export const setGeminiApiKey = (k: string): void => { store.set('geminiApiKey', k); };
 export const getGeminiModel = (): string => store.get('geminiModel') as string;
 export const setGeminiModel = (m: string): void => { store.set('geminiModel', m); };
+
+export const getTemperature = (): number => store.get('temperature') as number;
+export const setTemperature = (v: number): void => { store.set('temperature', v); };
+export const getMaxTokens = (): number => store.get('maxTokens') as number;
+export const setMaxTokens = (v: number): void => { store.set('maxTokens', v); };

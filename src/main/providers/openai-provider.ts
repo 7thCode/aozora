@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import type { LlmProvider } from '../llm-provider';
+import { getTemperature, getMaxTokens } from '../settings';
 
 export class OpenAiProvider implements LlmProvider {
   type = 'openai';
@@ -21,8 +22,8 @@ export class OpenAiProvider implements LlmProvider {
 
     const stream = await this.client.chat.completions.create({
       model: this.model,
-      temperature: 0.3,
-      max_tokens: 1024,
+      temperature: getTemperature(),
+      max_tokens: getMaxTokens(),
       messages: [
         { role: 'system', content: 'あなたは日本語テキストの要約を行うアシスタントです。回答は必ずMarkdown形式で出力してください。' },
         { role: 'user', content: prompt }

@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { LlmProvider } from '../llm-provider';
+import { getTemperature, getMaxTokens } from '../settings';
 
 export class AnthropicProvider implements LlmProvider {
   type = 'anthropic';
@@ -22,7 +23,8 @@ export class AnthropicProvider implements LlmProvider {
     let result = '';
     const stream = await this.client.messages.stream({
       model: this.model,
-      max_tokens: 1024,
+      max_tokens: getMaxTokens(),
+      temperature: Math.min(getTemperature(), 1.0),
       system: 'あなたは日本語テキストの要約を行うアシスタントです。回答は必ずMarkdown形式で出力してください。',
       messages: [{ role: 'user', content: prompt }],
     });

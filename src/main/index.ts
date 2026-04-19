@@ -5,11 +5,12 @@ import { AozoraDownloader } from './downloader';
 import { AozoraIndexFetcher } from './index-fetcher';
 import { CacheManager } from './cache-manager';
 import {
-  getSavePath, setSavePath, getModelPath, setModelPath, getModelsDirectory, setModelsDirectory, getHfToken,
+  getSavePath, setSavePath, getModelPath, setModelPath, getModelsDirectory, setModelsDirectory, getHfToken, setHfToken,
   getSelectedProvider, setSelectedProvider,
   getOpenaiApiKey, setOpenaiApiKey, getOpenaiModel, setOpenaiModel,
   getAnthropicApiKey, setAnthropicApiKey, getAnthropicModel, setAnthropicModel,
   getGeminiApiKey, setGeminiApiKey, getGeminiModel, setGeminiModel,
+  getTemperature, setTemperature, getMaxTokens, setMaxTokens,
 } from './settings';
 import { initializeLlm, isReady, getLoadedModelPath, disposeLlm } from './summarizer';
 import { getActiveProvider, setActiveProvider } from './llm-provider';
@@ -275,26 +276,30 @@ ipcMain.handle('llm:provider-set', async (_event, providerType: string, apiKey?:
       return { success: true };
     }
 
-    if (!apiKey) return { success: false, error: 'APIキーが必要です' };
-
     if (providerType === 'openai') {
+      const key = apiKey || getOpenaiApiKey();
+      if (!key) return { success: false, error: 'APIキーが必要です。設定ダイアログで入力してください。' };
       const m = model || getOpenaiModel();
-      setOpenaiApiKey(apiKey);
+      setOpenaiApiKey(key);
       setOpenaiModel(m);
       setSelectedProvider('openai');
-      setActiveProvider(new OpenAiProvider(apiKey, m));
+      setActiveProvider(new OpenAiProvider(key, m));
     } else if (providerType === 'anthropic') {
+      const key = apiKey || getAnthropicApiKey();
+      if (!key) return { success: false, error: 'APIキーが必要です。設定ダイアログで入力してください。' };
       const m = model || getAnthropicModel();
-      setAnthropicApiKey(apiKey);
+      setAnthropicApiKey(key);
       setAnthropicModel(m);
       setSelectedProvider('anthropic');
-      setActiveProvider(new AnthropicProvider(apiKey, m));
+      setActiveProvider(new AnthropicProvider(key, m));
     } else if (providerType === 'gemini') {
+      const key = apiKey || getGeminiApiKey();
+      if (!key) return { success: false, error: 'APIキーが必要です。設定ダイアログで入力してください。' };
       const m = model || getGeminiModel();
-      setGeminiApiKey(apiKey);
+      setGeminiApiKey(key);
       setGeminiModel(m);
       setSelectedProvider('gemini');
-      setActiveProvider(new GeminiProvider(apiKey, m));
+      setActiveProvider(new GeminiProvider(key, m));
     } else {
       return { success: false, error: '不明なプロバイダーです' };
     }
@@ -310,6 +315,37 @@ ipcMain.handle('llm:provider-get-saved-key', (_event, providerType: string) => {
   if (providerType === 'anthropic') return getAnthropicApiKey();
   if (providerType === 'gemini') return getGeminiApiKey();
   return '';
+});
+
+// ===== 設定ダイアログ =====
+ipcMain.handle('settings:get-all', () => ({
+  temperature: getTemperature(),
+  maxTokens: getMaxTokens(),
+  savePath: getSavePath(),
+  modelsDirectory: getModelsDirectory(),
+  hfToken: getHfToken(),
+  selectedProvider: getSelectedProvider(),
+  openaiApiKey: getOpenaiApiKey(),
+  openaiModel: getOpenaiModel(),
+  anthropicApiKey: getAnthropicApiKey(),
+  anthropicModel: getAnthropicModel(),
+  geminiApiKey: getGeminiApiKey(),
+  geminiModel: getGeminiModel(),
+}));
+
+ipcMain.handle('settings:set-temperature', (_event, v: number) => {
+  setTemperature(v);
+  return { success: true };
+});
+
+ipcMain.handle('settings:set-max-tokens', (_event, v: number) => {
+  setMaxTokens(v);
+  return { success: true };
+});
+
+ipcMain.handle('settings:set-hf-token', (_event, t: string) => {
+  setHfToken(t);
+  return { success: true };
 });
 
 // ===== モデルストア =====

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ModelStore from './components/ModelStore';
+import { SettingsDialog } from './components/SettingsDialog';
 
 interface WorkItem {
   id: string;
@@ -33,6 +34,21 @@ declare global {
       onLlmToken: (callback: (token: string) => void) => void;
       modelsList: () => Promise<{ models: any[] }>;
       onModelsDownloadComplete: (callback: (data: any) => void) => void;
+      llmProviderGet: () => Promise<{ provider: string; model: string; ready: boolean }>;
+      llmProviderSet: (provider: string, apiKey?: string, model?: string) => Promise<{ success: boolean; error?: string }>;
+      llmProviderGetSavedKey: (provider: string) => Promise<string>;
+      modelsDirSelect: () => Promise<{ success: boolean; path?: string }>;
+      modelsDirSet: (dirPath: string) => Promise<{ success: boolean }>;
+      settingsGetAll: () => Promise<{
+        temperature: number; maxTokens: number; savePath: string; modelsDirectory: string;
+        hfToken: string; selectedProvider: string;
+        openaiApiKey: string; openaiModel: string;
+        anthropicApiKey: string; anthropicModel: string;
+        geminiApiKey: string; geminiModel: string;
+      }>;
+      settingsSetTemperature: (v: number) => Promise<{ success: boolean }>;
+      settingsSetMaxTokens: (v: number) => Promise<{ success: boolean }>;
+      settingsSetHfToken: (t: string) => Promise<{ success: boolean }>;
     };
   }
 }
@@ -65,9 +81,8 @@ export default function App() {
   const [streamingText, setStreamingText] = useState('');
   // プロバイダー
   const [selectedProvider, setSelectedProvider] = useState<'local' | 'openai' | 'anthropic' | 'gemini'>('local');
-  const [cloudApiKey, setCloudApiKey] = useState('');
   const [cloudModel, setCloudModel] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     loadWorks();
@@ -84,7 +99,6 @@ export default function App() {
       if (provider !== 'local') {
         setCloudModel(model);
         setLlmReady(ready);
-        window.electronAPI.llmProviderGetSavedKey(provider).then(setCloudApiKey);
       }
     });
 
@@ -448,15 +462,14 @@ export default function App() {
                 const p = e.target.value as typeof selectedProvider;
                 setSelectedProvider(p);
                 setLlmReady(false);
-                setCloudApiKey('');
                 setCloudModel(
                   p === 'openai' ? 'gpt-4o-mini' :
                   p === 'anthropic' ? 'claude-haiku-4-5-20251001' :
                   p === 'gemini' ? 'gemini-1.5-flash' : ''
                 );
                 if (p !== 'local') {
-                  const saved = await window.electronAPI.llmProviderGetSavedKey(p);
-                  if (saved) setCloudApiKey(saved);
+                  const { ready } = await window.electronAPI.llmProviderGet();
+                  setLlmReady(ready);
                 }
               }}
               style={{ padding: '6px 10px', border: '1px solid #9C27B0', borderRadius: '4px', fontSize: '12px', background: '#fff', color: '#333' }}
@@ -467,22 +480,12 @@ export default function App() {
               <option value="gemini">✨ Gemini</option>
             </select>
 
-            {/* ローカル: モデルドロップダウン */}
+            {/* ローカル: モデルドロップダウン + 適用ボタン */}
             {selectedProvider === 'local' && (
               <>
                 <select
                   value={modelPath}
-                  onChange={async (e) => {
-                    const selected = e.target.value;
-                    if (!selected) return;
-                    setModelPath(selected);
-                    setLlmReady(false);
-                    setLlmInitializing(true);
-                    setLlmLoadProgress(0);
-                    const res = await window.electronAPI.llmInit(selected);
-                    setLlmInitializing(false);
-                    if (res.success) setLlmReady(true);
-                  }}
+                  onChange={(e) => setModelPath(e.target.value)}
                   style={{ padding: '6px 10px', border: '1px solid #9C27B0', borderRadius: '4px', fontSize: '12px', background: '#fff', color: '#333', maxWidth: '220px' }}
                 >
                   <option value="">モデルを選択...</option>
@@ -493,6 +496,22 @@ export default function App() {
                   ))}
                 </select>
                 <button
+                  onClick={async () => {
+                    if (!modelPath) return;
+                    setLlmReady(false);
+                    setLlmInitializing(true);
+                    setLlmLoadProgress(0);
+                    const res = await window.electronAPI.llmInit(modelPath);
+                    setLlmInitializing(false);
+                    if (res.success) setLlmReady(true);
+                    else alert(`エラー: ${res.error}`);
+                  }}
+                  disabled={!modelPath || llmInitializing}
+                  style={{ padding: '6px 12px', background: (!modelPath || llmInitializing) ? '#ccc' : '#7B1FA2', color: 'white', border: 'none', borderRadius: '4px', cursor: (!modelPath || llmInitializing) ? 'default' : 'pointer', fontSize: '12px' }}
+                >
+                  適用
+                </button>
+                <button
                   onClick={() => setShowModelStore(true)}
                   style={{ padding: '6px 12px', background: '#7B1FA2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
                 >
@@ -500,8 +519,10 @@ export default function App() {
                 </button>
               </>
             )}
-
-            {/* クラウド: モデル選択 + APIキー入力 */}
+            {llmReady && !llmInitializing && (
+              <span style={{ fontSize: '12px', color: '#4CAF50' }}>✅ 準備完了</span>
+            )}
+            {/* クラウド: モデル選択 + 適用ボタン */}
             {selectedProvider !== 'local' && (
               <>
                 <select
@@ -531,32 +552,16 @@ export default function App() {
                     </>
                   )}
                 </select>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <input
-                    type={showApiKey ? 'text' : 'password'}
-                    placeholder="APIキー"
-                    value={cloudApiKey}
-                    onChange={(e) => setCloudApiKey(e.target.value)}
-                    style={{ padding: '6px 10px', border: '1px solid #9C27B0', borderRadius: '4px', fontSize: '12px', width: '160px' }}
-                  />
-                  <button
-                    onClick={() => setShowApiKey((v) => !v)}
-                    style={{ padding: '4px 6px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', cursor: 'pointer', fontSize: '11px' }}
-                  >
-                    {showApiKey ? '🙈' : '👁'}
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (!cloudApiKey) return;
-                      const res = await window.electronAPI.llmProviderSet(selectedProvider, cloudApiKey, cloudModel);
-                      if (res.success) setLlmReady(true);
-                      else alert(`エラー: ${res.error}`);
-                    }}
-                    style={{ padding: '6px 12px', background: '#7B1FA2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
-                  >
-                    適用
-                  </button>
-                </div>
+                <button
+                  onClick={async () => {
+                    const res = await window.electronAPI.llmProviderSet(selectedProvider, undefined, cloudModel);
+                    if (res.success) setLlmReady(true);
+                    else alert(`エラー: ${res.error}`);
+                  }}
+                  style={{ padding: '6px 12px', background: '#7B1FA2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                >
+                  適用
+                </button>
               </>
             )}
             {llmInitializing && (
@@ -565,9 +570,12 @@ export default function App() {
                 {llmLoadProgress}%
               </span>
             )}
-            {llmReady && !llmInitializing && (
-              <span style={{ fontSize: '12px', color: '#4CAF50' }}>✅ 準備完了</span>
-            )}
+            <button
+              onClick={() => setShowSettings(true)}
+              style={{ padding: '6px 12px', background: '#7B1FA2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+            >
+              ⚙️ 設定
+            </button>
             <button
               onClick={handleFetchAll}
               disabled={loading}
@@ -677,6 +685,19 @@ export default function App() {
           );
         })}
       </div>
+
+      {/* 設定ダイアログ */}
+      {showSettings && (
+        <SettingsDialog
+          onClose={() => setShowSettings(false)}
+          onProviderChanged={async () => {
+            const r = await window.electronAPI.llmProviderGet();
+            setSelectedProvider(r.provider as any);
+            setCloudModel(r.model);
+            setLlmReady(r.ready);
+          }}
+        />
+      )}
 
       {/* モデルストア */}
       {showModelStore && (

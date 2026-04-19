@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { LlmProvider } from '../llm-provider';
+import { getTemperature } from '../settings';
 
 export class GeminiProvider implements LlmProvider {
   type = 'gemini';
@@ -19,7 +20,7 @@ export class GeminiProvider implements LlmProvider {
     const truncated = text.slice(0, 3000);
     const prompt = `あなたは日本語テキストの要約を行うアシスタントです。回答は必ずMarkdown形式で出力してください。\n\n次の文章を${maxChars}字以内でMarkdown形式で要約してください。見出し・箇条書き・強調などを適切に使ってください:\n\n${truncated}`;
 
-    const model = this.genAI.getGenerativeModel({ model: this.model });
+    const model = this.genAI.getGenerativeModel({ model: this.model, generationConfig: { temperature: getTemperature() } });
     const result = await model.generateContentStream(prompt);
 
     let full = '';

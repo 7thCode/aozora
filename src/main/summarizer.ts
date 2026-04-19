@@ -1,3 +1,5 @@
+import { getTemperature, getMaxTokens } from './settings';
+
 // node-llama-cpp はESMパッケージのため、new Function でTypeScriptのrequire変換を回避する
 const esmImport = new Function('modulePath', 'return import(modulePath)') as
   (modulePath: string) => Promise<any>;
@@ -43,8 +45,8 @@ export async function summarize(
   const prompt = `次の文章を${maxChars}字以内でMarkdown形式で要約してください。見出し・箇条書き・強調などを適切に使ってください:\n\n${truncated}`;
 
   return await session.prompt(prompt, {
-    temperature: 0.3,
-    maxTokens: 512,
+    temperature: getTemperature(),
+    maxTokens: getMaxTokens(),
     onTextChunk: onToken
   });
 }
