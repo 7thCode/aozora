@@ -7,6 +7,13 @@ interface Settings {
   modelPath: string;
   modelsDirectory: string;
   hfToken: string;
+  selectedProvider: string;
+  openaiApiKey: string;
+  openaiModel: string;
+  anthropicApiKey: string;
+  anthropicModel: string;
+  geminiApiKey: string;
+  geminiModel: string;
 }
 
 const store: any = new Store<Settings>({
@@ -15,6 +22,13 @@ const store: any = new Store<Settings>({
     modelPath: '',
     modelsDirectory: path.join(app.getPath('userData'), 'models'),
     hfToken: '',
+    selectedProvider: 'local',
+    openaiApiKey: '',
+    openaiModel: 'gpt-4o-mini',
+    anthropicApiKey: '',
+    anthropicModel: 'claude-haiku-4-5-20251001',
+    geminiApiKey: '',
+    geminiModel: 'gemini-1.5-flash',
   }
 });
 
@@ -49,3 +63,21 @@ export const getHfToken = (): string => {
 export const setHfToken = (token: string): void => {
   store.set('hfToken', token);
 };
+
+export const getSelectedProvider = (): string => store.get('selectedProvider') as string;
+export const setSelectedProvider = (p: string): void => { store.set('selectedProvider', p); };
+
+export const getOpenaiApiKey = (): string => store.get('openaiApiKey') as string;
+export const setOpenaiApiKey = (k: string): void => { store.set('openaiApiKey', k); };
+export const getOpenaiModel = (): string => store.get('openaiModel') as string;
+export const setOpenaiModel = (m: string): void => { store.set('openaiModel', m); };
+
+export const getAnthropicApiKey = (): string => store.get('anthropicApiKey') as string;
+export const setAnthropicApiKey = (k: string): void => { store.set('anthropicApiKey', k); };
+export const getAnthropicModel = (): string => store.get('anthropicModel') as string;
+export const setAnthropicModel = (m: string): void => { store.set('anthropicModel', m); };
+
+export const getGeminiApiKey = (): string => store.get('geminiApiKey') as string;
+export const setGeminiApiKey = (k: string): void => { store.set('geminiApiKey', k); };
+export const getGeminiModel = (): string => store.get('geminiModel') as string;
+export const setGeminiModel = (m: string): void => { store.set('geminiModel', m); };

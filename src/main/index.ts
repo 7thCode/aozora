@@ -4,8 +4,19 @@ import * as fs from 'fs';
 import { AozoraDownloader } from './downloader';
 import { AozoraIndexFetcher } from './index-fetcher';
 import { CacheManager } from './cache-manager';
-import { getSavePath, setSavePath, getModelPath, setModelPath, getModelsDirectory, setModelsDirectory, getHfToken } from './settings';
-import { initializeLlm, summarize, isReady, getLoadedModelPath, disposeLlm } from './summarizer';
+import {
+  getSavePath, setSavePath, getModelPath, setModelPath, getModelsDirectory, setModelsDirectory, getHfToken,
+  getSelectedProvider, setSelectedProvider,
+  getOpenaiApiKey, setOpenaiApiKey, getOpenaiModel, setOpenaiModel,
+  getAnthropicApiKey, setAnthropicApiKey, getAnthropicModel, setAnthropicModel,
+  getGeminiApiKey, setGeminiApiKey, getGeminiModel, setGeminiModel,
+} from './settings';
+import { initializeLlm, isReady, getLoadedModelPath, disposeLlm } from './summarizer';
+import { getActiveProvider, setActiveProvider } from './llm-provider';
+import { LocalProvider, createLocalProvider } from './providers/local-provider';
+import { OpenAiProvider } from './providers/openai-provider';
+import { AnthropicProvider } from './providers/anthropic-provider';
+import { GeminiProvider } from './providers/gemini-provider';
 import { ModelManager } from './model-manager';
 import { ModelDownloader } from './model-downloader';
 import { searchHuggingFaceModels } from './hf-search';
@@ -218,22 +229,13 @@ ipcMain.handle('llm:init', async (event, modelPath?: string) => {
   if (!targetPath) return { success: false, error: 'モデルパスが設定されていません' };
 
   try {
-    await initializeLlm(targetPath, (progress) => {
+    const provider = await createLocalProvider(targetPath, (progress) => {
       event.sender.send('llm:load-progress', progress);
     });
+    setActiveProvider(provider);
+    setModelPath(targetPath);
+    setSelectedProvider('local');
     return { success: true };
-  } catch (error) {
-    return { success: false, error: (error as Error).message };
-  }
-});
-
-ipcMain.handle('llm:summarize', async (event, text: string) => {
-  try {
-    let result = '';
-    result = await summarize(text, (token) => {
-      event.sender.send('llm:token', token);
-    });
-    return { success: true, result };
   } catch (error) {
     return { success: false, error: (error as Error).message };
   }
@@ -244,8 +246,70 @@ ipcMain.handle('llm:status', () => {
 });
 
 ipcMain.handle('llm:dispose', async () => {
+  const provider = getActiveProvider();
+  if (provider) await provider.dispose();
+  setActiveProvider(null);
   await disposeLlm();
   return { success: true };
+});
+
+// プロバイダー切り替え
+ipcMain.handle('llm:provider-get', () => {
+  const p = getSelectedProvider();
+  let model = '';
+  if (p === 'openai') model = getOpenaiModel();
+  else if (p === 'anthropic') model = getAnthropicModel();
+  else if (p === 'gemini') model = getGeminiModel();
+  const provider = getActiveProvider();
+  return { provider: p, model, ready: provider?.isReady() ?? false };
+});
+
+ipcMain.handle('llm:provider-set', async (_event, providerType: string, apiKey?: string, model?: string) => {
+  try {
+    const current = getActiveProvider();
+    if (current) await current.dispose();
+
+    if (providerType === 'local') {
+      setSelectedProvider('local');
+      setActiveProvider(null);
+      return { success: true };
+    }
+
+    if (!apiKey) return { success: false, error: 'APIキーが必要です' };
+
+    if (providerType === 'openai') {
+      const m = model || getOpenaiModel();
+      setOpenaiApiKey(apiKey);
+      setOpenaiModel(m);
+      setSelectedProvider('openai');
+      setActiveProvider(new OpenAiProvider(apiKey, m));
+    } else if (providerType === 'anthropic') {
+      const m = model || getAnthropicModel();
+      setAnthropicApiKey(apiKey);
+      setAnthropicModel(m);
+      setSelectedProvider('anthropic');
+      setActiveProvider(new AnthropicProvider(apiKey, m));
+    } else if (providerType === 'gemini') {
+      const m = model || getGeminiModel();
+      setGeminiApiKey(apiKey);
+      setGeminiModel(m);
+      setSelectedProvider('gemini');
+      setActiveProvider(new GeminiProvider(apiKey, m));
+    } else {
+      return { success: false, error: '不明なプロバイダーです' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+ipcMain.handle('llm:provider-get-saved-key', (_event, providerType: string) => {
+  if (providerType === 'openai') return getOpenaiApiKey();
+  if (providerType === 'anthropic') return getAnthropicApiKey();
+  if (providerType === 'gemini') return getGeminiApiKey();
+  return '';
 });
 
 // ===== モデルストア =====
@@ -310,9 +374,12 @@ ipcMain.handle('models:dir-set', async (_event, dirPath: string) => {
 // ===== LLM 要約（作品テキスト）=====
 ipcMain.handle('llm:summarize-work', async (event, cardUrl: string, maxChars = 300) => {
   try {
+    const provider = getActiveProvider();
+    if (!provider || !provider.isReady()) {
+      return { success: false, error: 'LLMが準備できていません。プロバイダーを選択してください。' };
+    }
     const text = await downloader.fetchPlainText(cardUrl);
-    let result = '';
-    result = await summarize(text, (token) => {
+    const result = await provider.summarize(text, (token) => {
       event.sender.send('llm:token', token);
     }, maxChars);
     return { success: true, result };

@@ -63,6 +63,11 @@ export default function App() {
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [summarizingId, setSummarizingId] = useState<string | null>(null);
   const [streamingText, setStreamingText] = useState('');
+  // プロバイダー
+  const [selectedProvider, setSelectedProvider] = useState<'local' | 'openai' | 'anthropic' | 'gemini'>('local');
+  const [cloudApiKey, setCloudApiKey] = useState('');
+  const [cloudModel, setCloudModel] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
 
   useEffect(() => {
     loadWorks();
@@ -72,6 +77,16 @@ export default function App() {
     // LLM初期化状態とモデルパスを確認
     window.electronAPI.llmStatus().then(({ ready }) => setLlmReady(ready));
     window.electronAPI.llmGetModelPath().then(setModelPath);
+
+    // プロバイダー情報を復元
+    window.electronAPI.llmProviderGet().then(({ provider, model, ready }) => {
+      setSelectedProvider(provider as any);
+      if (provider !== 'local') {
+        setCloudModel(model);
+        setLlmReady(ready);
+        window.electronAPI.llmProviderGetSavedKey(provider).then(setCloudApiKey);
+      }
+    });
 
     // ローカルモデル一覧を取得
     const loadLocalModels = () =>
@@ -374,7 +389,6 @@ export default function App() {
             <input
               type="number"
               min={50}
-              max={2000}
               step={50}
               value={summaryLength}
               onChange={(e) => setSummaryLength(parseInt(e.target.value) || 300)}
@@ -426,61 +440,134 @@ export default function App() {
               </div>
             )}
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {/* モデル選択ドロップダウン */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* プロバイダー選択 */}
             <select
-              value={modelPath}
+              value={selectedProvider}
               onChange={async (e) => {
-                const selected = e.target.value;
-                if (!selected) return;
-                setModelPath(selected);
+                const p = e.target.value as typeof selectedProvider;
+                setSelectedProvider(p);
                 setLlmReady(false);
-                setLlmInitializing(true);
-                setLlmLoadProgress(0);
-                const res = await window.electronAPI.llmInit(selected);
-                setLlmInitializing(false);
-                if (res.success) setLlmReady(true);
+                setCloudApiKey('');
+                setCloudModel(
+                  p === 'openai' ? 'gpt-4o-mini' :
+                  p === 'anthropic' ? 'claude-haiku-4-5-20251001' :
+                  p === 'gemini' ? 'gemini-1.5-flash' : ''
+                );
+                if (p !== 'local') {
+                  const saved = await window.electronAPI.llmProviderGetSavedKey(p);
+                  if (saved) setCloudApiKey(saved);
+                }
               }}
-              style={{
-                padding: '6px 10px',
-                border: '1px solid #9C27B0',
-                borderRadius: '4px',
-                fontSize: '12px',
-                background: '#fff',
-                color: '#333',
-                maxWidth: '220px'
-              }}
+              style={{ padding: '6px 10px', border: '1px solid #9C27B0', borderRadius: '4px', fontSize: '12px', background: '#fff', color: '#333' }}
             >
-              <option value="">🤖 モデルを選択...</option>
-              {localModels.map((m) => (
-                <option key={m.id} value={m.path}>
-                  {llmReady && modelPath === m.path ? '✅ ' : ''}{m.name}
-                </option>
-              ))}
+              <option value="local">🖥 ローカル</option>
+              <option value="openai">🤖 OpenAI</option>
+              <option value="anthropic">🔷 Claude</option>
+              <option value="gemini">✨ Gemini</option>
             </select>
+
+            {/* ローカル: モデルドロップダウン */}
+            {selectedProvider === 'local' && (
+              <>
+                <select
+                  value={modelPath}
+                  onChange={async (e) => {
+                    const selected = e.target.value;
+                    if (!selected) return;
+                    setModelPath(selected);
+                    setLlmReady(false);
+                    setLlmInitializing(true);
+                    setLlmLoadProgress(0);
+                    const res = await window.electronAPI.llmInit(selected);
+                    setLlmInitializing(false);
+                    if (res.success) setLlmReady(true);
+                  }}
+                  style={{ padding: '6px 10px', border: '1px solid #9C27B0', borderRadius: '4px', fontSize: '12px', background: '#fff', color: '#333', maxWidth: '220px' }}
+                >
+                  <option value="">モデルを選択...</option>
+                  {localModels.map((m) => (
+                    <option key={m.id} value={m.path}>
+                      {llmReady && modelPath === m.path ? '✅ ' : ''}{m.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => setShowModelStore(true)}
+                  style={{ padding: '6px 12px', background: '#7B1FA2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                >
+                  🤖 モデル
+                </button>
+              </>
+            )}
+
+            {/* クラウド: モデル選択 + APIキー入力 */}
+            {selectedProvider !== 'local' && (
+              <>
+                <select
+                  value={cloudModel}
+                  onChange={(e) => setCloudModel(e.target.value)}
+                  style={{ padding: '6px 10px', border: '1px solid #9C27B0', borderRadius: '4px', fontSize: '12px', background: '#fff', color: '#333' }}
+                >
+                  {selectedProvider === 'openai' && (
+                    <>
+                      <option value="gpt-4o-mini">gpt-4o-mini</option>
+                      <option value="gpt-4o">gpt-4o</option>
+                      <option value="gpt-4-turbo">gpt-4-turbo</option>
+                    </>
+                  )}
+                  {selectedProvider === 'anthropic' && (
+                    <>
+                      <option value="claude-haiku-4-5-20251001">claude-haiku-4-5</option>
+                      <option value="claude-sonnet-4-5">claude-sonnet-4-5</option>
+                      <option value="claude-opus-4-5">claude-opus-4-5</option>
+                    </>
+                  )}
+                  {selectedProvider === 'gemini' && (
+                    <>
+                      <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                      <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                      <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                    </>
+                  )}
+                </select>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <input
+                    type={showApiKey ? 'text' : 'password'}
+                    placeholder="APIキー"
+                    value={cloudApiKey}
+                    onChange={(e) => setCloudApiKey(e.target.value)}
+                    style={{ padding: '6px 10px', border: '1px solid #9C27B0', borderRadius: '4px', fontSize: '12px', width: '160px' }}
+                  />
+                  <button
+                    onClick={() => setShowApiKey((v) => !v)}
+                    style={{ padding: '4px 6px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', cursor: 'pointer', fontSize: '11px' }}
+                  >
+                    {showApiKey ? '🙈' : '👁'}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!cloudApiKey) return;
+                      const res = await window.electronAPI.llmProviderSet(selectedProvider, cloudApiKey, cloudModel);
+                      if (res.success) setLlmReady(true);
+                      else alert(`エラー: ${res.error}`);
+                    }}
+                    style={{ padding: '6px 12px', background: '#7B1FA2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                  >
+                    適用
+                  </button>
+                </div>
+              </>
+            )}
             {llmInitializing && (
               <span style={{ fontSize: '12px', color: '#7B1FA2', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span className="spinner" style={{ borderTopColor: '#7B1FA2' }} />
+                <span className="spinner" />
                 {llmLoadProgress}%
               </span>
             )}
             {llmReady && !llmInitializing && (
               <span style={{ fontSize: '12px', color: '#4CAF50' }}>✅ 準備完了</span>
             )}
-            <button
-              onClick={() => setShowModelStore(true)}
-              style={{
-                padding: '6px 12px',
-                background: '#7B1FA2',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '12px'
-              }}
-            >
-              🤖 モデル
-            </button>
             <button
               onClick={handleFetchAll}
               disabled={loading}

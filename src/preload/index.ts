@@ -15,12 +15,15 @@ export interface ElectronAPI {
   llmGetModelPath: () => Promise<string>;
   llmSelectModel: () => Promise<{ success: boolean; path?: string }>;
   llmInit: (modelPath?: string) => Promise<{ success: boolean; error?: string }>;
-  llmSummarize: (text: string) => Promise<{ success: boolean; result?: string; error?: string }>;
   llmStatus: () => Promise<{ ready: boolean; modelPath: string | null }>;
   llmDispose: () => Promise<{ success: boolean }>;
   llmSummarizeWork: (cardUrl: string, maxChars?: number) => Promise<{ success: boolean; result?: string; error?: string }>;
   onLlmLoadProgress: (callback: (progress: number) => void) => void;
   onLlmToken: (callback: (token: string) => void) => void;
+  // プロバイダー
+  llmProviderGet: () => Promise<{ provider: string; model: string; ready: boolean }>;
+  llmProviderSet: (provider: string, apiKey?: string, model?: string) => Promise<{ success: boolean; error?: string }>;
+  llmProviderGetSavedKey: (provider: string) => Promise<string>;
   // モデルストア
   modelsGetPreset: () => Promise<any[]>;
   modelsList: () => Promise<{ models: any[] }>;
@@ -53,7 +56,6 @@ const electronAPI: ElectronAPI = {
   llmGetModelPath: () => ipcRenderer.invoke('llm:get-model-path'),
   llmSelectModel: () => ipcRenderer.invoke('llm:select-model'),
   llmInit: (modelPath?: string) => ipcRenderer.invoke('llm:init', modelPath),
-  llmSummarize: (text: string) => ipcRenderer.invoke('llm:summarize', text),
   llmStatus: () => ipcRenderer.invoke('llm:status'),
   llmDispose: () => ipcRenderer.invoke('llm:dispose'),
   llmSummarizeWork: (cardUrl: string, maxChars?: number) => ipcRenderer.invoke('llm:summarize-work', cardUrl, maxChars),
@@ -63,6 +65,11 @@ const electronAPI: ElectronAPI = {
   onLlmToken: (callback: (token: string) => void) => {
     ipcRenderer.on('llm:token', (_event, token) => callback(token));
   },
+  // プロバイダー
+  llmProviderGet: () => ipcRenderer.invoke('llm:provider-get'),
+  llmProviderSet: (provider: string, apiKey?: string, model?: string) =>
+    ipcRenderer.invoke('llm:provider-set', provider, apiKey, model),
+  llmProviderGetSavedKey: (provider: string) => ipcRenderer.invoke('llm:provider-get-saved-key', provider),
   // モデルストア
   modelsGetPreset: () => ipcRenderer.invoke('models:get-preset'),
   modelsList: () => ipcRenderer.invoke('models:list'),
